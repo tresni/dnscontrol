@@ -104,6 +104,9 @@ func runTests(t *testing.T, prv providers.DNSServiceProvider, domainName string,
 				skipVal = true
 			}
 			dom, _ := dc.Copy()
+			if tst.NoPurge {
+				dom.KeepUnknown = true
+			}
 			for _, r := range tst.Records {
 				rc := models.RecordConfig(*r)
 				rc.NameFQDN = dnsutil.AddOrigin(rc.Name, domainName)
@@ -117,6 +120,16 @@ func runTests(t *testing.T, prv providers.DNSServiceProvider, domainName string,
 			corrections, err := prv.GetDomainCorrections(dom)
 			if err != nil {
 				t.Fatal(err)
+			}
+			if tst.ExpectNoCorrections {
+				if len(corrections) > 0 {
+					t.Logf("Expected 0 corrections, but found %d.", len(corrections))
+					for i, c := range corrections {
+						t.Logf("#%d: %s", i, c.Msg)
+					}
+					t.FailNow()
+				}
+				return
 			}
 			if !skipVal && i != *startIdx && len(corrections) == 0 {
 				if tst.Desc != "Empty" {
@@ -195,8 +208,10 @@ func TestDualProviders(t *testing.T) {
 }
 
 type TestCase struct {
-	Desc    string
-	Records []*rec
+	Desc                string
+	NoPurge             bool
+	ExpectNoCorrections bool
+	Records             []*rec
 }
 
 type rec models.RecordConfig
@@ -256,11 +271,13 @@ func (r *rec) ttl(t uint32) *rec {
 	return r
 }
 
-func tc(desc string, recs ...*rec) *TestCase {
-	return &TestCase{
-		Desc:    desc,
-		Records: recs,
-	}
+func (t *TestCase) noPurge() *TestCase {
+	t.NoPurge = true
+	return t
+}
+func (t *TestCase) expectNoChanges() *TestCase {
+	t.ExpectNoCorrections = true
+	return t
 }
 
 func manyA(namePattern, target string, n int) []*rec {
@@ -273,101 +290,105 @@ func manyA(namePattern, target string, n int) []*rec {
 
 func makeTests(t *testing.T) []*TestCase {
 	//ALWAYS ADD TO BOTTOM OF LIST. Order and indexes matter.
-	tests := []*TestCase{
-		// A
-		tc("Empty"),
-		tc("Create an A record", a("@", "1.1.1.1")),
-		tc("Change it", a("@", "1.2.3.4")),
-		tc("Add another", a("@", "1.2.3.4"), a("www", "1.2.3.4")),
-		tc("Add another(same name)", a("@", "1.2.3.4"), a("www", "1.2.3.4"), a("www", "5.6.7.8")),
-		tc("Change a ttl", a("@", "1.2.3.4").ttl(1000), a("www", "1.2.3.4"), a("www", "5.6.7.8")),
-		tc("Change single target from set", a("@", "1.2.3.4").ttl(1000), a("www", "2.2.2.2"), a("www", "5.6.7.8")),
-		tc("Change all ttls", a("@", "1.2.3.4").ttl(500), a("www", "2.2.2.2").ttl(400), a("www", "5.6.7.8").ttl(400)),
-		tc("Delete one", a("@", "1.2.3.4").ttl(500), a("www", "5.6.7.8").ttl(400)),
-		tc("Add back and change ttl", a("www", "5.6.7.8").ttl(700), a("www", "1.2.3.4").ttl(700)),
-		tc("Change targets and ttls", a("www", "1.1.1.1"), a("www", "2.2.2.2")),
 
-		// CNAMES
-		tc("Empty"),
-		tc("Create a CNAME", cname("foo", "google.com.")),
-		tc("Change it", cname("foo", "google2.com.")),
-		tc("Change to A record", a("foo", "1.2.3.4")),
-		tc("Change back to CNAME", cname("foo", "google.com.")),
-		tc("Record pointing to @", cname("foo", "**current-domain**")),
-
-		//NS
-		tc("Empty"),
-		tc("NS for subdomain", ns("xyz", "ns2.foo.com.")),
-		tc("Dual NS for subdomain", ns("xyz", "ns2.foo.com."), ns("xyz", "ns1.foo.com.")),
-		tc("Record pointing to @", ns("foo", "**current-domain**")),
-
-		//IDNAs
-		tc("Empty"),
-		tc("Internationalized name", a("ööö", "1.2.3.4")),
-		tc("Change IDN", a("ööö", "2.2.2.2")),
-		tc("Internationalized CNAME Target", cname("a", "ööö.com.")),
-		tc("IDN CNAME AND Target", cname("öoö", "ööö.企业.")),
-
-		//MX
-		tc("Empty"),
-		tc("MX record", mx("@", 5, "foo.com.")),
-		tc("Second MX record, same prio", mx("@", 5, "foo.com."), mx("@", 5, "foo2.com.")),
-		tc("3 MX", mx("@", 5, "foo.com."), mx("@", 5, "foo2.com."), mx("@", 15, "foo3.com.")),
-		tc("Delete one", mx("@", 5, "foo2.com."), mx("@", 15, "foo3.com.")),
-		tc("Change to other name", mx("@", 5, "foo2.com."), mx("mail", 15, "foo3.com.")),
-		tc("Change Preference", mx("@", 7, "foo2.com."), mx("mail", 15, "foo3.com.")),
-		tc("Record pointing to @", mx("foo", 8, "**current-domain**")),
+	tests := []*TestCase{}
+	tc := func(desc string, recs ...*rec) *TestCase {
+		tCase := &TestCase{
+			Desc:    desc,
+			Records: recs,
+		}
+		tests = append(tests, tCase)
+		return tCase
 	}
+	// A
+	tc("Empty")
+	tc("Create an A record", a("@", "1.1.1.1"))
+	tc("Change it", a("@", "1.2.3.4"))
+	tc("Add another", a("@", "1.2.3.4"), a("www", "1.2.3.4"))
+	tc("Add another(same name)", a("@", "1.2.3.4"), a("www", "1.2.3.4"), a("www", "5.6.7.8"))
+	tc("Change a ttl", a("@", "1.2.3.4").ttl(1000), a("www", "1.2.3.4"), a("www", "5.6.7.8"))
+	tc("Change single target from set", a("@", "1.2.3.4").ttl(1000), a("www", "2.2.2.2"), a("www", "5.6.7.8"))
+	tc("Change all ttls", a("@", "1.2.3.4").ttl(500), a("www", "2.2.2.2").ttl(400), a("www", "5.6.7.8").ttl(400))
+	tc("Delete one", a("@", "1.2.3.4").ttl(500), a("www", "5.6.7.8").ttl(400))
+	tc("Add back and change ttl", a("www", "5.6.7.8").ttl(700), a("www", "1.2.3.4").ttl(700))
+	tc("Change targets and ttls", a("www", "1.1.1.1"), a("www", "2.2.2.2"))
+
+	// CNAMES
+	tc("Empty")
+	tc("Create a CNAME", cname("foo", "google.com."))
+	tc("Change it", cname("foo", "google2.com."))
+	tc("Change to A record", a("foo", "1.2.3.4"))
+	tc("Change back to CNAME", cname("foo", "google.com."))
+	tc("Record pointing to @", cname("foo", "**current-domain**"))
+
+	//NS
+	tc("Empty")
+	tc("NS for subdomain", ns("xyz", "ns2.foo.com."))
+	tc("Dual NS for subdomain", ns("xyz", "ns2.foo.com."), ns("xyz", "ns1.foo.com."))
+	tc("Record pointing to @", ns("foo", "**current-domain**"))
+
+	//IDNAs
+	tc("Empty")
+	tc("Internationalized name", a("ööö", "1.2.3.4"))
+	tc("Change IDN", a("ööö", "2.2.2.2"))
+	tc("Internationalized CNAME Target", cname("a", "ööö.com."))
+	tc("IDN CNAME AND Target", cname("öoö", "ööö.企业."))
+
+	//MX
+	tc("Empty")
+	tc("MX record", mx("@", 5, "foo.com."))
+	tc("Second MX record, same prio", mx("@", 5, "foo.com."), mx("@", 5, "foo2.com."))
+	tc("3 MX", mx("@", 5, "foo.com."), mx("@", 5, "foo2.com."), mx("@", 15, "foo3.com."))
+	tc("Delete one", mx("@", 5, "foo2.com."), mx("@", 15, "foo3.com."))
+	tc("Change to other name", mx("@", 5, "foo2.com."), mx("mail", 15, "foo3.com."))
+	tc("Change Preference", mx("@", 7, "foo2.com."), mx("mail", 15, "foo3.com."))
+	tc("Record pointing to @", mx("foo", 8, "**current-domain**"))
 
 	// PTR
 	if !providers.ProviderHasCabability(*providerToRun, providers.CanUsePTR) {
 		t.Log("Skipping PTR Tests because provider does not support them")
 	} else {
-		tests = append(tests, tc("Empty"),
-			tc("Create PTR record", ptr("4", "foo.com.")),
-			tc("Modify PTR record", ptr("4", "bar.com.")),
-		)
+		tc("Empty")
+		tc("Create PTR record", ptr("4", "foo.com."))
+		tc("Modify PTR record", ptr("4", "bar.com."))
 	}
 
 	// ALIAS
 	if !providers.ProviderHasCabability(*providerToRun, providers.CanUseAlias) {
 		t.Log("Skipping ALIAS Tests because provider does not support them")
 	} else {
-		tests = append(tests, tc("Empty"),
-			tc("ALIAS at root", alias("@", "foo.com.")),
-			tc("change it", alias("@", "foo2.com.")),
-			tc("ALIAS at subdomain", alias("test", "foo.com.")),
-		)
+		tc("Empty")
+		tc("ALIAS at root", alias("@", "foo.com."))
+		tc("change it", alias("@", "foo2.com."))
+		tc("ALIAS at subdomain", alias("test", "foo.com."))
 	}
 
 	// SRV
 	if !providers.ProviderHasCabability(*providerToRun, providers.CanUseSRV) {
 		t.Log("Skipping SRV Tests because provider does not support them")
 	} else {
-		tests = append(tests, tc("Empty"),
-			tc("SRV record", srv("_sip._tcp", 5, 6, 7, "foo.com.")),
-			tc("Second SRV record, same prio", srv("_sip._tcp", 5, 6, 7, "foo.com."), srv("_sip._tcp", 5, 60, 70, "foo2.com.")),
-			tc("3 SRV", srv("_sip._tcp", 5, 6, 7, "foo.com."), srv("_sip._tcp", 5, 60, 70, "foo2.com."), srv("_sip._tcp", 15, 65, 75, "foo3.com.")),
-			tc("Delete one", srv("_sip._tcp", 5, 6, 7, "foo.com."), srv("_sip._tcp", 15, 65, 75, "foo3.com.")),
-			tc("Change Target", srv("_sip._tcp", 5, 6, 7, "foo.com."), srv("_sip._tcp", 15, 65, 75, "foo4.com.")),
-			tc("Change Priority", srv("_sip._tcp", 52, 6, 7, "foo.com."), srv("_sip._tcp", 15, 65, 75, "foo4.com.")),
-			tc("Change Weight", srv("_sip._tcp", 52, 62, 7, "foo.com."), srv("_sip._tcp", 15, 65, 75, "foo4.com.")),
-			tc("Change Port", srv("_sip._tcp", 52, 62, 72, "foo.com."), srv("_sip._tcp", 15, 65, 75, "foo4.com.")),
-		)
+		tc("Empty")
+		tc("SRV record", srv("_sip._tcp", 5, 6, 7, "foo.com."))
+		tc("Second SRV record, same prio", srv("_sip._tcp", 5, 6, 7, "foo.com."), srv("_sip._tcp", 5, 60, 70, "foo2.com."))
+		tc("3 SRV", srv("_sip._tcp", 5, 6, 7, "foo.com."), srv("_sip._tcp", 5, 60, 70, "foo2.com."), srv("_sip._tcp", 15, 65, 75, "foo3.com."))
+		tc("Delete one", srv("_sip._tcp", 5, 6, 7, "foo.com."), srv("_sip._tcp", 15, 65, 75, "foo3.com."))
+		tc("Change Target", srv("_sip._tcp", 5, 6, 7, "foo.com."), srv("_sip._tcp", 15, 65, 75, "foo4.com."))
+		tc("Change Priority", srv("_sip._tcp", 52, 6, 7, "foo.com."), srv("_sip._tcp", 15, 65, 75, "foo4.com."))
+		tc("Change Weight", srv("_sip._tcp", 52, 62, 7, "foo.com."), srv("_sip._tcp", 15, 65, 75, "foo4.com."))
+		tc("Change Port", srv("_sip._tcp", 52, 62, 72, "foo.com."), srv("_sip._tcp", 15, 65, 75, "foo4.com."))
 	}
 
 	// CAA
 	if !providers.ProviderHasCabability(*providerToRun, providers.CanUseCAA) {
 		t.Log("Skipping CAA Tests because provider does not support them")
 	} else {
-		tests = append(tests, tc("Empty"),
-			tc("CAA record", caa("@", "issue", 0, "letsencrypt.org")),
-			tc("CAA change tag", caa("@", "issuewild", 0, "letsencrypt.org")),
-			tc("CAA change target", caa("@", "issuewild", 0, "example.com")),
-			tc("CAA change flag", caa("@", "issuewild", 128, "example.com")),
-			tc("CAA many records", caa("@", "issue", 0, "letsencrypt.org"), caa("@", "issuewild", 0, ";"), caa("@", "iodef", 128, "mailto:test@example.com")),
-			tc("CAA delete", caa("@", "issue", 0, "letsencrypt.org")),
-		)
+		tc("Empty")
+		tc("CAA record", caa("@", "issue", 0, "letsencrypt.org"))
+		tc("CAA change tag", caa("@", "issuewild", 0, "letsencrypt.org"))
+		tc("CAA change target", caa("@", "issuewild", 0, "example.com"))
+		tc("CAA change flag", caa("@", "issuewild", 128, "example.com"))
+		tc("CAA many records", caa("@", "issue", 0, "letsencrypt.org"), caa("@", "issuewild", 0, ";"), caa("@", "iodef", 128, "mailto:test@example.com"))
+		tc("CAA delete", caa("@", "issue", 0, "letsencrypt.org"))
 	}
 
 	// Test large zonefiles.
@@ -380,11 +401,26 @@ func makeTests(t *testing.T) []*TestCase {
 	if skip[*providerToRun] {
 		t.Log("Skipping Large record count Tests because provider does not support them")
 	} else {
-		tests = append(tests, tc("Empty"),
-			tc("99 records", manyA("rec%04d", "1.2.3.4", 99)...),
-			tc("100 records", manyA("rec%04d", "1.2.3.4", 100)...),
-			tc("101 records", manyA("rec%04d", "1.2.3.4", 101)...),
-		)
+		tc("Empty")
+		tc("99 records", manyA("rec%04d", "1.2.3.4", 99)...)
+		tc("100 records", manyA("rec%04d", "1.2.3.4", 100)...)
+		tc("101 records", manyA("rec%04d", "1.2.3.4", 101)...)
+	}
+
+	// NO_PURGE!
+	if providers.ProviderHasCabability(*providerToRun, providers.CantUseNOPURGE) {
+		t.Log("Skipping NO_PURGE Tests because provider does not support them")
+	} else {
+		tc("Setup 2 records", a("a", "1.2.3.4"), a("b", "1.2.3.4"))
+		tc("Add new record w/ no purge", a("c", "1.2.3.4")).noPurge()
+		tc("Expect all 3 to be there", a("a", "1.2.3.4"), a("b", "1.2.3.4"), a("c", "1.2.3.4")).expectNoChanges()
+		tc("Change a record", a("a", "2.2.3.4")).noPurge()
+		tc("Expect all 3 to be there", a("a", "2.2.3.4"), a("b", "1.2.3.4"), a("c", "1.2.3.4")).expectNoChanges()
+		// if a recordset is used, at all (with name and type matching). We assume the entire set is fully managed
+		tc("Set up 2 records same name", a("a", "1.2.3.4"), a("a", "2.2.3.4"), a("c", "1.2.3.4"))
+		tc("Fake empty").noPurge().expectNoChanges()
+		tc("Remove one of the records", a("a", "1.2.3.4")).noPurge()
+		tc("Check expected state", a("a", "1.2.3.4"), a("c", "1.2.3.4")).expectNoChanges()
 	}
 
 	return tests
