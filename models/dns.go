@@ -13,6 +13,7 @@ import (
 
 	"github.com/StackExchange/dnscontrol/pkg/transform"
 	"github.com/miekg/dns"
+	"github.com/miekg/dns/dnsutil"
 	"golang.org/x/net/idna"
 )
 
@@ -116,7 +117,7 @@ func (r *RecordConfig) String() (content string) {
 
 	content = fmt.Sprintf("%s %s %s %d", r.Type, r.NameFQDN, r.Target, r.TTL)
 	switch r.Type { // #rtype_variations
-	case "A", "AAAA", "CNAME", "PTR", "TXT":
+	case "A", "AAAA", "CNAME", "PTR", "TXT", "NS":
 		// Nothing special.
 	case "MX":
 		content += fmt.Sprintf(" priority=%d", r.MxPreference)
@@ -253,6 +254,57 @@ func (rc *RecordConfig) ToRR() dns.RR {
 	}
 
 	return rr
+}
+
+// RRToRecord Convert's dns.RR into our native data type.
+// Records are translated directly with no changes.
+func RRToRecord(rr dns.RR, origin string) *RecordConfig {
+
+	header := rr.Header()
+	rc := &RecordConfig{
+		Type:     dns.TypeToString[header.Rrtype],
+		NameFQDN: strings.ToLower(strings.TrimSuffix(header.Name, ".")),
+		Name:     strings.ToLower(dnsutil.TrimDomainName(header.Name, origin)),
+		TTL:      header.Ttl,
+		Original: rr,
+	}
+	switch v := rr.(type) { // #rtype_variations
+	case *dns.A:
+		rc.Target = v.A.String()
+	case *dns.AAAA:
+		rc.Target = v.AAAA.String()
+	case *dns.CAA:
+		rc.CaaTag = v.Tag
+		rc.CaaFlag = v.Flag
+		rc.Target = v.Value
+	case *dns.CNAME:
+		rc.Target = v.Target
+	case *dns.MX:
+		rc.Target = v.Mx
+		rc.MxPreference = v.Preference
+	case *dns.NS:
+		rc.Target = v.Ns
+	case *dns.PTR:
+		rc.Target = v.Ptr
+	case *dns.SOA:
+		rc.Target = fmt.Sprintf("%v %v %v %v %v %v %v",
+			v.Ns, v.Mbox, v.Serial, v.Refresh, v.Retry, v.Expire, v.Minttl)
+	case *dns.SRV:
+		rc.Target = v.Target
+		rc.SrvPort = v.Port
+		rc.SrvWeight = v.Weight
+		rc.SrvPriority = v.Priority
+	case *dns.TLSA:
+		rc.TlsaUsage = v.Usage
+		rc.TlsaSelector = v.Selector
+		rc.TlsaMatchingType = v.MatchingType
+		rc.Target = v.Certificate
+	case *dns.TXT:
+		rc.Target = strings.Join(v.Txt, " ")
+	default:
+		log.Fatalf("rrToRecord: Unimplemented zone record type=%s (%v)\n", rc.Type, rr)
+	}
+	return rc
 }
 
 func atou32(s string) uint32 {

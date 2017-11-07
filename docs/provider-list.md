@@ -83,3 +83,22 @@ code to support this provider, please re-open the issue. We'd be glad to help in
   <li>Linode (<a href="https://github.com/StackExchange/dnscontrol/issues/121">#121</a>)</li>
   <li>OVH (<a href="https://github.com/StackExchange/dnscontrol/issues/143">#143</a>)</li>
 </ul>
+<ul id="issue-list"></ul>
+
+<script>
+$(function(){
+  var url = "https://api.github.com/repos/StackExchange/dnscontrol/issues?state=all&labels=provider-request&direction=asc"
+  var jqxhr = $.get( url, function(data) {
+   console.log(data)
+   for (var i = 0; i<data.length; i++){
+     var iss = data[i];
+     var newEl = $("<li>"+iss.title+"</li>")
+     $("#issue-list").append(newEl)
+   }
+  })
+  .fail(function() {
+    alert( "error" );
+  });
+ 
+})
+</script>
