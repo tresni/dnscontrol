@@ -12,13 +12,13 @@ type Notifier interface {
 }
 
 // new notification types should add themselves to this array
-var initers = []func(map[string]string) Notifier{}
+var inits = []func(map[string]string) Notifier{}
 
 // Init will take the given config map (from creds.json notifications key) and create a single Notifier with
 // all notifications it has full config for.
 func Init(config map[string]string) Notifier {
 	notifiers := multiNotifier{}
-	for _, i := range initers {
+	for _, i := range inits {
 		n := i(config)
 		if n != nil {
 			notifiers = append(notifiers, n)

@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	initers = append(initers, func(cfg map[string]string) Notifier {
+	inits = append(inits, func(cfg map[string]string) Notifier {
 		if url, ok := cfg["bonfire_url"]; ok {
 			return bonfireNotifier(url)
 		}
