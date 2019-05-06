@@ -17,26 +17,14 @@ func ToLower(src []byte) []byte {
 	return src
 }
 
-// Equal returns true when s matches the target.
-func Equal(s, target []byte) bool {
-	if len(s) != len(target) {
-		return false
-	}
-	for i, c := range target {
-		if s[i] != c {
-			return false
-		}
-	}
-	return true
-}
-
 // EqualFold returns true when s matches case-insensitively the targetLower (which must be lowercase).
 func EqualFold(s, targetLower []byte) bool {
 	if len(s) != len(targetLower) {
 		return false
 	}
 	for i, c := range targetLower {
-		if s[i] != c && (c < 'A' && c > 'Z' || s[i]+('a'-'A') != c) {
+		d := s[i]
+		if d != c && (d < 'A' || d > 'Z' || d+('a'-'A') != c) {
 			return false
 		}
 	}
@@ -92,6 +80,55 @@ func IsWhitespace(c byte) bool {
 	return whitespaceTable[c]
 }
 
+var newlineTable = [256]bool{
+	// ASCII
+	false, false, false, false, false, false, false, false,
+	false, false, true, false, false, true, false, false, // new line, carriage return
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+
+	// non-ASCII
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false,
+}
+
+// IsNewline returns true for \n, \r.
+func IsNewline(c byte) bool {
+	return newlineTable[c]
+}
+
 // IsAllWhitespace returns true when the entire byte slice consists of space, \n, \r, \t, \f.
 func IsAllWhitespace(b []byte) bool {
 	for _, c := range b {
@@ -130,7 +167,7 @@ func ReplaceMultipleWhitespace(b []byte) []byte {
 	for i, c := range b {
 		if IsWhitespace(c) {
 			prevWS = true
-			if c == '\n' || c == '\r' {
+			if IsNewline(c) {
 				hasNewline = true
 			}
 		} else {

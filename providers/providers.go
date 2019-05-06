@@ -24,6 +24,17 @@ type DomainCreator interface {
 	EnsureDomainExists(domain string) error
 }
 
+// DNSSECProvider is a provider that implements dnssec signing. This interface is a way to pull out
+// the DS signing key records that we need to pass up to the registrar.
+type DNSSECProvider interface {
+	GetDSRecord() (*models.RecordConfig, error)
+}
+
+// DNSSECRegistrar is the registrar portion of setting up dnssec. It takes the DS records from the provider(s) and registers them with the upstream chain.
+type DNSSECRegistrar interface {
+	SetDSRecords([]*models.RecordConfig, error)
+}
+
 // RegistrarInitializer is a function to create a registrar. Function will be passed the unprocessed json payload from the configuration file for the given provider.
 type RegistrarInitializer func(map[string]string) (Registrar, error)
 

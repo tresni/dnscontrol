@@ -1,15 +1,15 @@
-# JSON [![GoDoc](http://godoc.org/github.com/tdewolff/parse/json?status.svg)](http://godoc.org/github.com/tdewolff/parse/json) [![GoCover](http://gocover.io/_badge/github.com/tdewolff/parse/json)](http://gocover.io/github.com/tdewolff/parse/json)
+# JSON [![GoDoc](http://godoc.org/github.com/tdewolff/parse/json?status.svg)](http://godoc.org/github.com/tdewolff/parse/json)
 
 This package is a JSON lexer (ECMA-404) written in [Go][1]. It follows the specification at [JSON](http://json.org/). The lexer takes an io.Reader and converts it into tokens until the EOF.
 
 ## Installation
 Run the following command
 
-	go get github.com/tdewolff/parse/json
+	go get -u github.com/tdewolff/parse/v2/json
 
 or add the following import and run project with `go get`
 
-	import "github.com/tdewolff/parse/json"
+	import "github.com/tdewolff/parse/v2/json"
 
 ## Parser
 ### Usage
@@ -51,7 +51,7 @@ package main
 import (
 	"os"
 
-	"github.com/tdewolff/parse/json"
+	"github.com/tdewolff/parse/v2/json"
 )
 
 // Tokenize JSON from stdin.
