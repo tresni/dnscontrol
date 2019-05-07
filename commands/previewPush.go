@@ -33,7 +33,7 @@ type PreviewArgs struct {
 	GetDNSConfigArgs
 	GetCredentialsArgs
 	FilterArgs
-	Notify bool
+	Notify      bool
 	WarnChanges bool
 }
 
@@ -116,6 +116,7 @@ DomainLoop:
 			continue
 		}
 		out.StartDomain(domain.Name)
+		// discover nameservers dynamically from providers
 		nsList, err := nameservers.DetermineNameservers(domain)
 		if err != nil {
 			return err

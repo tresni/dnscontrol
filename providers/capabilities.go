@@ -42,13 +42,19 @@ const (
 
 	// DocOfficiallySupported means it is actively used and maintained by stack exchange
 	DocOfficiallySupported
-	// DocDualHost means provider allows full management of apex NS records, so we can safely dual-host with anothe provider
+	// DocDualHost means provider allows full management of apex NS records, so we can safely dual-host with another provider
 	DocDualHost
 	// DocCreateDomains means provider can add domains with the `dnscontrol create-domains` command
 	DocCreateDomains
 
 	// CanUseRoute53Alias indicates the provider support the specific R53_ALIAS records that only the Route53 provider supports
 	CanUseRoute53Alias
+
+	// CanProvideDNSSEC is the DNS Provider part of dnssec. Means the provider implements DnssecProvider. Usually means provider has a button called "Enable dnssec", and an api to
+	// get the public part of the signing keys.
+	CanProvideDNSSEC
+	// CanRegisterDNSSEC is the Registrar portion of dnssec. It means the registrar has an api to submit DS records.
+	CanRegisterDNSSEC
 )
 
 var providerCapabilities = map[string]map[Capability]bool{}

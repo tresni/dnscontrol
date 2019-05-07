@@ -458,6 +458,19 @@ func checkProviderCapabilities(dc *models.DomainConfig) error {
 			}
 		}
 	}
+	if dc.EnableDNSSEC {
+		for _, provider := range dc.DNSProviderInstances {
+			if !providers.ProviderHasCabability(provider.ProviderType, providers.CanProvideDNSSEC) {
+				return errors.Errorf("Domain %s uses DNSSEC, but DNS provider type %s does not support it", dc.Name, provider.ProviderType)
+			}
+		}
+
+		reg := dc.RegistrarInstance
+		if !providers.ProviderHasCabability(reg.ProviderType, providers.CanRegisterDNSSEC) {
+			return errors.Errorf("Domain %s uses DNSSEC, but Registrar type %s does not support it", dc.Name, reg.ProviderType)
+		}
+
+	}
 	return nil
 }
 

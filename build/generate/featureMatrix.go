@@ -42,6 +42,8 @@ func generateFeatureMatrix() error {
 			{"dual host", "This provider is recommended for use in 'dual hosting' scenarios. Usually this means the provider allows full control over the apex NS records"},
 			{"create-domains", "This means the provider can automatically create domains that do not currently exist on your account. The 'dnscontrol create-domains' command will initialize any missing domains"},
 			{"no_purge", "indicates you can use NO_PURGE macro to prevent deleting records not managed by dnscontrol. A few providers that generate the entire zone from scratch have a problem implementing this."},
+			{"dnssec provider", "A dns provider that can automatically sign dns records for you"},
+			{"dnssec registrar", "A dns registrar that can automatically register dnssec signing keys with the tld registrar system"},
 		},
 	}
 	for _, p := range providerTypes {
@@ -83,6 +85,8 @@ func generateFeatureMatrix() error {
 		setCap("TXTMulti", providers.CanUseTXTMulti)
 		setDoc("dual host", providers.DocDualHost, false)
 		setDoc("create-domains", providers.DocCreateDomains, true)
+		setDoc("dnssec provider", providers.CanProvideDNSSEC, true)
+		setDoc("dnssec registrar", providers.CanRegisterDNSSEC, true)
 
 		// no purge is a freaky double negative
 		cap := providers.CantUseNOPURGE

@@ -413,6 +413,10 @@ function NO_PURGE(d) {
     d.KeepUnknown = true;
 }
 
+function DNSSEC(d){
+    d.dnssec = true;
+}
+
 /**
  * @deprecated
  */
