@@ -15,7 +15,7 @@ tinydns -
 */
 
 import (
-    "bufio"
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -28,7 +28,7 @@ import (
 
 	"github.com/StackExchange/dnscontrol/models"
 	"github.com/StackExchange/dnscontrol/providers"
-    "github.com/StackExchange/dnscontrol/providers/bind"
+	"github.com/StackExchange/dnscontrol/providers/bind"
 	"github.com/StackExchange/dnscontrol/providers/diff"
 )
 
@@ -70,8 +70,8 @@ func init() {
 }
 
 type soaInfo struct {
-    bind.SoaInfo
-    TTL uint32 `json:"ttl"`
+	bind.SoaInfo
+	TTL uint32 `json:"ttl"`
 }
 
 // Tinydns is the provider handle for the Tinydns driver.
@@ -107,7 +107,7 @@ func makeDefaultSOA(info soaInfo, origin string) *models.RecordConfig {
 		info.Minttl = 1440
 	}
 	soaRec.SetTarget(info.String())
-    soaRec.TTL = info.TTL
+	soaRec.TTL = info.TTL
 
 	return &soaRec
 }
@@ -152,15 +152,15 @@ func (c *Tinydns) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Corre
 		// errors will be reported.
 		fmt.Printf("\nCould not read zonefile: %v\n", err)
 	} else {
-        scanner := bufio.NewScanner(foundFH)
-        for scanner.Scan() {
-            rec, dataLine := lineToRecord(scanner.Text(), dc.Name)
-            if !dataLine {
-                continue
-            }
-            foundRecords = append(foundRecords, &rec)
-        }
-        /*
+		scanner := bufio.NewScanner(foundFH)
+		for scanner.Scan() {
+			rec, dataLine := lineToRecord(scanner.Text(), dc.Name)
+			if !dataLine {
+				continue
+			}
+			foundRecords = append(foundRecords, &rec)
+		}
+		/*
 		for x := range dns.ParseZone(foundFH, dc.Name, zonefile) {
 			if x.Error != nil {
 				log.Println("Error in zonefile:", x.Error)
@@ -180,12 +180,12 @@ func (c *Tinydns) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Corre
 				foundRecords = append(foundRecords, &rec)
 			}
 		}
-        */
+		*/
 	}
 
 	// Add SOA record to expected set:
 	if !dc.HasRecordTypeName("SOA", "@") {
-        dc.Records = append(models.Records{soaRec}, dc.Records...)
+		dc.Records = append(models.Records{soaRec}, dc.Records...)
 	}
 
 	// Normalize
@@ -243,7 +243,7 @@ func (c *Tinydns) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Corre
 					return nil
 				},
 			})
-    }
+	}
 
 	return corrections, nil
 }
