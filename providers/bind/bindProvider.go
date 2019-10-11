@@ -92,8 +92,8 @@ type Bind struct {
 
 // var bindSkeletin = flag.String("bind_skeletin", "skeletin/master/var/named/chroot/var/named/master", "")
 
-func rrToRecord(rr dns.RR, origin string, replaceSerial uint32) (models.RecordConfig, uint32) {
-	// Convert's dns.RR into our native data type (models.RecordConfig).
+// RrToRecord convert's dns.RR into our native data type (models.RecordConfig).
+func RrToRecord(rr dns.RR, origin string, replaceSerial uint32) (models.RecordConfig, uint32) {
 	// Records are translated directly with no changes.
 	// If it is an SOA for the apex domain and
 	// replaceSerial != 0, change the serial to replaceSerial.
@@ -148,7 +148,7 @@ func rrToRecord(rr dns.RR, origin string, replaceSerial uint32) (models.RecordCo
 	case *dns.TXT:
 		panicInvalid(rc.SetTargetTXTs(v.Txt))
 	default:
-		log.Fatalf("rrToRecord: Unimplemented zone record type=%s (%v)\n", rc.Type, rr)
+		log.Fatalf("RrToRecord: Unimplemented zone record type=%s (%v)\n", rc.Type, rr)
 	}
 	return rc, oldSerial
 }
@@ -235,7 +235,7 @@ func (c *Bind) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Correcti
 			if x.Error != nil {
 				log.Println("Error in zonefile:", x.Error)
 			} else {
-				rec, serial := rrToRecord(x.RR, dc.Name, oldSerial)
+				rec, serial := RrToRecord(x.RR, dc.Name, oldSerial)
 				if serial != 0 && oldSerial != 0 {
 					log.Fatalf("Multiple SOA records in zonefile: %v\n", zonefile)
 				}
@@ -244,7 +244,7 @@ func (c *Bind) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Correcti
 					oldSerial = serial
 					newSerial = generateSerial(oldSerial)
 					// Regenerate with new serial:
-					*soaRec, _ = rrToRecord(x.RR, dc.Name, newSerial)
+					*soaRec, _ = RrToRecord(x.RR, dc.Name, newSerial)
 					rec = *soaRec
 				}
 				foundRecords = append(foundRecords, &rec)

@@ -45,12 +45,13 @@ import (
 
 	"github.com/StackExchange/dnscontrol/providers/bind"
 	"github.com/StackExchange/dnscontrol/providers/octodns/octoyaml"
+	"github.com/StackExchange/dnscontrol/providers/tinydns"
 	"github.com/miekg/dns"
 	"github.com/miekg/dns/dnsutil"
 	"github.com/pkg/errors"
 )
 
-var flagInfmt = flag.String("in", "zone", "zone|octodns")
+var flagInfmt = flag.String("in", "zone", "zone|octodns|tinydns")
 var flagOutfmt = flag.String("out", "dsl", "dsl|tsv|pretty")
 var flagDefaultTTL = flag.Uint("ttl", 300, "Default TTL")
 var flagRegText = flag.String("registrar", "REG_FILL_IN", "registrar text")
@@ -77,6 +78,8 @@ func main() {
 		recs = readZone(zonename, reader, filename)
 	case "oct", "octo", "octodns":
 		recs = readOctodns(zonename, reader, filename)
+	case "tiny", "tinydns":
+		recs = readTinydns(zonename, reader, filename)
 	}
 
 	// Write it out:
@@ -149,6 +152,11 @@ func readOctodns(zonename string, r io.Reader, filename string) []dns.RR {
 		l = append(l, x.ToRR())
 	}
 	return l
+}
+
+
+func readTinydns(zonename string, r io.Reader, filename string) []dns.RR {
+	return tinydns.ReadDataFile(zonename, r)
 }
 
 // pretty outputs the zonefile using the prettyprinter.

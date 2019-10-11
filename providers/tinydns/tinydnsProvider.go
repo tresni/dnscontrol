@@ -15,7 +15,6 @@ tinydns -
 */
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -35,12 +34,10 @@ import (
 var features = providers.DocumentationNotes{
 	providers.CanUseCAA:              providers.Can(),
 	providers.CanUsePTR:              providers.Can(),
-	providers.CanUseNAPTR:            providers.Cannot(),
+	providers.CanUseNAPTR:            providers.Can(),
 	providers.CanUseSRV:              providers.Can(),
-	providers.CanUseSSHFP:            providers.Cannot(),
-	providers.CanUseTLSA:             providers.Cannot(),
-	providers.CanUseTXTMulti:         providers.Can(),
-	providers.CantUseNOPURGE:         providers.Cannot(),
+	providers.CanUseSSHFP:            providers.Can(),
+	providers.CanUseTLSA:             providers.Can(),
 	providers.DocCreateDomains:       providers.Can("Driver just maintains list of zone files. It should automatically add missing ones."),
 	providers.DocDualHost:            providers.Can(),
 }
@@ -152,35 +149,11 @@ func (c *Tinydns) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Corre
 		// errors will be reported.
 		fmt.Printf("\nCould not read zonefile: %v\n", err)
 	} else {
-		scanner := bufio.NewScanner(foundFH)
-		for scanner.Scan() {
-			rec, dataLine := lineToRecord(scanner.Text(), dc.Name)
-			if !dataLine {
-				continue
-			}
+		for _, r := range ReadDataFile(dc.Name, foundFH) {
+			var rec models.RecordConfig
+			rec, _ = bind.RrToRecord(r, dc.Name, 0)
 			foundRecords = append(foundRecords, &rec)
 		}
-		/*
-		for x := range dns.ParseZone(foundFH, dc.Name, zonefile) {
-			if x.Error != nil {
-				log.Println("Error in zonefile:", x.Error)
-			} else {
-				rec, serial := rrToRecord(x.RR, dc.Name, oldSerial)
-				if serial != 0 && oldSerial != 0 {
-					log.Fatalf("Multiple SOA records in zonefile: %v\n", zonefile)
-				}
-				if serial != 0 {
-					// This was an SOA record. Update the serial.
-					oldSerial = serial
-					newSerial = generateSerial(oldSerial)
-					// Regenerate with new serial:
-					*soaRec, _ = rrToRecord(x.RR, dc.Name, newSerial)
-					rec = *soaRec
-				}
-				foundRecords = append(foundRecords, &rec)
-			}
-		}
-		*/
 	}
 
 	// Add SOA record to expected set:
