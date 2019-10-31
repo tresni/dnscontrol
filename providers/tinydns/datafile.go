@@ -3,17 +3,17 @@ package tinydns
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"strconv"
 	"strings"
-	"encoding/binary"
-	"encoding/hex"
 
-	"github.com/miekg/dns"
 	"github.com/StackExchange/dnscontrol/models"
+	"github.com/miekg/dns"
 )
 
 func deOctalString(s string) []byte {
@@ -21,7 +21,7 @@ func deOctalString(s string) []byte {
 	for x := 0; x < len(s); x++ {
 		if s[x] == '\\' {
 			// special stuff
-			oct := s[x+1:x+4]
+			oct := s[x+1 : x+4]
 			i, err := strconv.ParseUint(oct, 8, 0)
 			if err != nil {
 				log.Fatalf("Error deOctalizing %v", err)
@@ -86,7 +86,7 @@ func unpackName(b []byte) string {
 }
 
 func unpackString(b []byte) (string, []byte) {
-	return string(b[1:b[0]+1]), b[b[0]+1:]
+	return string(b[1 : b[0]+1]), b[b[0]+1:]
 }
 
 // ReadError is an error reading the tinydns data file
@@ -110,7 +110,7 @@ func parseDataFile(zonename string, r io.Reader, rrs chan dns.RR) {
 }
 
 // ReadDataFile reads a tinydns data file and returns an array of zones & records
-func ReadDataFile(zonename string, r io.Reader) ([]dns.RR) {
+func ReadDataFile(zonename string, r io.Reader) []dns.RR {
 	var foundRecords []dns.RR
 	rrs := make(chan dns.RR)
 
@@ -149,7 +149,7 @@ func createSOARecord(fqdn, nameserver, mbox string, ttl uint32) dns.RR {
 
 func parseTinydnsName(fqdn, name, sub string) string {
 	if !strings.Contains(name, ".") {
-		return strings.Join([]string {name, sub, fqdn}, ".")
+		return strings.Join([]string{name, sub, fqdn}, ".")
 	}
 	return name
 }
@@ -165,7 +165,7 @@ func lineToRecord(line, origin string, rrs chan dns.RR) error {
 	if len(line) == 0 {
 		return nil
 	}
-	fields := strings.Split(line[1:],":")
+	fields := strings.Split(line[1:], ":")
 	fqdn := fields[0]
 	maxField := len(fields) - 1
 	ttlField := maxField
@@ -186,7 +186,7 @@ func lineToRecord(line, origin string, rrs chan dns.RR) error {
 		if len(fields[1]) != 0 && dns.IsSubDomain(origin, nameserver) {
 			rrs <- createARecord(nameserver, fields[1], ttl)
 		}
-		rrs <- createSOARecord(fqdn, nameserver, "hostmaster." + fqdn, ttl)
+		rrs <- createSOARecord(fqdn, nameserver, "hostmaster."+fqdn, ttl)
 		rrs <- createNSRecord(fqdn, nameserver, ttl)
 		ttlField = 3
 	case 'Z':
@@ -194,7 +194,7 @@ func lineToRecord(line, origin string, rrs chan dns.RR) error {
 			return nil
 		}
 		r = createSOARecord(fqdn, fields[1], fields[2], 0)
-		for i := 3; i<=8; i++ {
+		for i := 3; i <= 8; i++ {
 			var v uint32
 			if len(fields[i]) > 0 {
 				val, err := strconv.ParseUint(fields[i], 10, 32)
@@ -315,7 +315,7 @@ func lineToRecord(line, origin string, rrs chan dns.RR) error {
 			r.(*dns.SSHFP).Type = data[1]
 			r.(*dns.SSHFP).FingerPrint = hex.EncodeToString(deOctalString(string(data[2:])))
 		case "52":
-			r = new (dns.TLSA)
+			r = new(dns.TLSA)
 			r.(*dns.TLSA).Hdr = dns.RR_Header{Name: fqdn, Rrtype: dns.TypeTLSA, Class: dns.ClassINET, Ttl: ttl}
 			r.(*dns.TLSA).Usage = data[0]
 			r.(*dns.TLSA).Selector = data[1]
@@ -373,14 +373,14 @@ func WriteDataFile(w io.Writer, records []*models.RecordConfig, origin string) e
 			fmt.Fprintf(w, "@%s::%s:%d:%d\n", r.GetLabelFQDN(), r.GetTargetField(), r.MxPreference, r.TTL)
 		case "NAPTR":
 			fmt.Fprintf(w, ":%s:35:%s%s\\%03o%s\\%03o%s\\%03o%s%s:%d\n",
-						r.GetLabelFQDN(),
-						uint16ToOctal(r.NaptrOrder),
-						uint16ToOctal(r.NaptrPreference),
-						len(r.NaptrFlags), r.NaptrFlags,
-						len(r.NaptrService), escapeString(r.NaptrService),
-						len(r.NaptrRegexp), escapeString(r.NaptrRegexp),
-						nameToOctalPack(r.GetTargetField()),
-						r.TTL)
+				r.GetLabelFQDN(),
+				uint16ToOctal(r.NaptrOrder),
+				uint16ToOctal(r.NaptrPreference),
+				len(r.NaptrFlags), r.NaptrFlags,
+				len(r.NaptrService), escapeString(r.NaptrService),
+				len(r.NaptrRegexp), escapeString(r.NaptrRegexp),
+				nameToOctalPack(r.GetTargetField()),
+				r.TTL)
 		case "NS":
 			fmt.Fprintf(w, "&%s::%s:%d\n", r.GetLabelFQDN(), r.GetTargetField(), r.TTL)
 		case "PTR":
@@ -393,7 +393,7 @@ func WriteDataFile(w io.Writer, records []*models.RecordConfig, origin string) e
 			if err != nil {
 				log.Fatalf("Unable to encode %s as hex string", r.GetTargetField())
 			}
-			fmt.Fprintf(w,":%s:44:\\%03o\\%03o%s:%d\n", r.GetLabelFQDN(), r.SshfpAlgorithm, r.SshfpFingerprint, octalString(hex), r.TTL)
+			fmt.Fprintf(w, ":%s:44:\\%03o\\%03o%s:%d\n", r.GetLabelFQDN(), r.SshfpAlgorithm, r.SshfpFingerprint, octalString(hex), r.TTL)
 		case "TLSA":
 			fmt.Fprintf(w, ":%s:52:\\%03o\\%03o\\%03o%s:%d\n", r.GetLabelFQDN(), r.TlsaUsage, r.TlsaSelector, r.TlsaMatchingType, r.GetTargetField(), r.TTL)
 		case "TXT":

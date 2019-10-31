@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 	"strings"
 
-//	"github.com/pkg/errors"
+	//	"github.com/pkg/errors"
 
 	"github.com/StackExchange/dnscontrol/models"
 	"github.com/StackExchange/dnscontrol/providers"
@@ -32,14 +32,14 @@ import (
 )
 
 var features = providers.DocumentationNotes{
-	providers.CanUseCAA:              providers.Can(),
-	providers.CanUsePTR:              providers.Can(),
-	providers.CanUseNAPTR:            providers.Can(),
-	providers.CanUseSRV:              providers.Can(),
-	providers.CanUseSSHFP:            providers.Can(),
-	providers.CanUseTLSA:             providers.Can(),
-	providers.DocCreateDomains:       providers.Can("Driver just maintains list of zone files. It should automatically add missing ones."),
-	providers.DocDualHost:            providers.Can(),
+	providers.CanUseCAA:        providers.Can(),
+	providers.CanUsePTR:        providers.Can(),
+	providers.CanUseNAPTR:      providers.Can(),
+	providers.CanUseSRV:        providers.Can(),
+	providers.CanUseSSHFP:      providers.Can(),
+	providers.CanUseTLSA:       providers.Can(),
+	providers.DocCreateDomains: providers.Can("Driver just maintains list of zone files. It should automatically add missing ones."),
+	providers.DocDualHost:      providers.Can(),
 }
 
 func initTinydns(config map[string]string, providermeta json.RawMessage) (providers.DNSServiceProvider, error) {
@@ -74,9 +74,9 @@ type soaInfo struct {
 // Tinydns is the provider handle for the Tinydns driver.
 type Tinydns struct {
 	//DefaultNS   []string `json:"default_ns"`
-	DefaultSoa  soaInfo  `json:"default_soa"`
+	DefaultSoa soaInfo `json:"default_soa"`
 	//nameservers []*models.Nameserver
-	directory   string
+	directory string
 }
 
 func makeDefaultSOA(info soaInfo, origin string) *models.RecordConfig {
