@@ -21,7 +21,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
+	//	"strings"
 
 	//	"github.com/pkg/errors"
 
@@ -141,7 +141,8 @@ func (c *Tinydns) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Corre
 		fmt.Printf("\nWARNING: Tinydns directory %q does not exist!\n", c.directory)
 	}
 
-	zonefile := filepath.Join(c.directory, strings.Replace(strings.ToLower(dc.Name), "/", "_", -1)+".data")
+	var zones ZoneData
+	zonefile := filepath.Join(c.directory, "data")
 	foundFH, err := os.Open(zonefile)
 	zoneFileFound := err == nil
 	if err != nil && !os.IsNotExist(os.ErrNotExist) {
@@ -149,9 +150,14 @@ func (c *Tinydns) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Corre
 		// errors will be reported.
 		fmt.Printf("\nCould not read zonefile: %v\n", err)
 	} else {
-		for _, r := range ReadDataFile(dc.Name, foundFH) {
-			var rec models.RecordConfig
-			rec, _ = bind.RrToRecord(r, dc.Name, 0)
+		zones = ReadDataFile(dc.Name, foundFH)
+		fz := findZone(&zones, dc.Name)
+		records := fz.records
+		if fz.soa != nil {
+			records = append(records, fz.soa)
+		}
+		for _, r := range records {
+			rec, _ := bind.RrToRecord(r, dc.Name, 0)
 			foundRecords = append(foundRecords, &rec)
 		}
 	}
@@ -194,6 +200,13 @@ func (c *Tinydns) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Corre
 	}
 	msg += buf.String()
 	corrections := []*models.Correction{}
+
+	/* Grab all records from all zones EXCEPT the zone we care about */
+	records := ZonesToRecordConfigs(&zones, dc.Name)
+	models.PostProcessRecords(records)
+	/* Swap out dc.Records with the full dataset */
+	dc.Records = append(records, dc.Records...)
+	/* Now right out the data file */
 	if changes {
 		corrections = append(corrections,
 			&models.Correction{

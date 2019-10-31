@@ -2,8 +2,6 @@ package tinydns
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -13,81 +11,12 @@ import (
 	"strings"
 
 	"github.com/StackExchange/dnscontrol/models"
+	"github.com/StackExchange/dnscontrol/providers/bind"
+	//"github.com/StackExchange/dnscontrol/providers/bind"
 	"github.com/miekg/dns"
+	"github.com/miekg/dns/dnsutil"
+	//"github.com/miekg/dns/dnsutil"
 )
-
-func deOctalString(s string) []byte {
-	var buf []byte
-	for x := 0; x < len(s); x++ {
-		if s[x] == '\\' {
-			// special stuff
-			oct := s[x+1 : x+4]
-			i, err := strconv.ParseUint(oct, 8, 0)
-			if err != nil {
-				log.Fatalf("Error deOctalizing %v", err)
-			}
-			buf = append(buf, byte(i))
-			x += 3
-		} else {
-			buf = append(buf, s[x])
-		}
-	}
-	return buf
-}
-
-func octalString(buf []byte) string {
-	var ret string
-	for _, b := range buf {
-		ret += fmt.Sprintf("\\%03o", b)
-	}
-	return ret
-}
-
-func uint16ToOctal(u uint16) string {
-	buf := make([]byte, 2)
-	binary.BigEndian.PutUint16(buf, u)
-	return octalString(buf)
-}
-
-func nameToOctalPack(s string) string {
-	segments := strings.Split(s, ".")
-	var ret string
-	for _, s := range segments {
-		ret += fmt.Sprintf("\\%03o%s", len(s), s)
-	}
-	return ret
-}
-
-func byteToUint16(b []byte) uint16 {
-	var target uint16
-	buf := bytes.NewReader(b)
-	binary.Read(buf, binary.BigEndian, &target)
-	return target
-}
-
-func escapeString(s string) (e string) {
-	e = strings.ReplaceAll(s, "\t", "\\011")
-	e = strings.ReplaceAll(e, "\r", "\\015")
-	e = strings.ReplaceAll(e, "\n", "\\012")
-	e = strings.ReplaceAll(e, "\\", "\\134")
-	e = strings.ReplaceAll(e, "/", "\\057")
-	e = strings.ReplaceAll(e, ":", "\\072")
-	return
-}
-
-func unpackName(b []byte) string {
-	var name string
-	for len(b) > 1 {
-		var label string
-		label, b = unpackString(b)
-		name += label + "."
-	}
-	return name
-}
-
-func unpackString(b []byte) (string, []byte) {
-	return string(b[1 : b[0]+1]), b[b[0]+1:]
-}
 
 // ReadError is an error reading the tinydns data file
 type ReadError struct {
@@ -99,30 +28,118 @@ func (e *ReadError) Error() (s string) {
 	return
 }
 
-func parseDataFile(zonename string, r io.Reader, rrs chan dns.RR) {
+// ZoneData is the holder for records for each SOA
+type ZoneData struct {
+	name     string
+	records  []dns.RR
+	children []*ZoneData
+	soa      dns.RR
+}
+
+func parseDataFile(r io.Reader, rrs chan dns.RR) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
-		if err := lineToRecord(scanner.Text(), zonename, rrs); err != nil {
+		if err := lineToRecord(scanner.Text(), rrs); err != nil {
 			log.Fatalf(err.Error())
 		}
 	}
 	close(rrs)
 }
 
+func findZone(z *ZoneData, name string) *ZoneData {
+	labels := dns.SplitDomainName(name)
+	soa, c := z, z
+	for i := len(labels) - 1; i >= 0 && c != nil; i-- {
+		c = findLabel(c, labels[i])
+		if c == nil {
+			return soa
+		}
+		if c.soa != nil {
+			soa = c
+		}
+	}
+	return soa
+}
+
+func findLabel(z *ZoneData, label string) *ZoneData {
+	for _, c := range z.children {
+		if c.name == label {
+			return c
+		}
+	}
+	return nil
+}
+
+func addZone(z *ZoneData, rr dns.RR) {
+	labels := dns.SplitDomainName(rr.Header().Name)
+	target := z
+	for i := len(labels) - 1; i >= 0; i-- {
+		c := findLabel(target, labels[i])
+		if c == nil {
+			c = &ZoneData{name: labels[i]}
+			target.children = append(target.children, c)
+		}
+		target = c
+	}
+	target.soa = rr
+}
+
+func splitRecords(zone *ZoneData, rrs []dns.RR) ZoneData {
+	for _, r := range rrs {
+		z := findZone(zone, r.Header().Name)
+		z.records = append(z.records, r)
+	}
+	return *zone
+}
+
+func recurseZoneToRecords(zone *ZoneData, ignore, origin string, r chan *models.RecordConfig) {
+	if zone.soa != nil {
+		rec, _ := bind.RrToRecord(zone.soa, origin, 0)
+		r <- &rec
+	}
+	for _, rr := range zone.records {
+		rec, _ := bind.RrToRecord(rr, origin, 0)
+		r <- &rec
+	}
+	for _, c := range zone.children {
+		recurseZoneToRecords(c, ignore, dnsutil.AddOrigin(zone.name, origin), r)
+	}
+}
+
+func zoneToRecords(zone *ZoneData, ignore string, r chan *models.RecordConfig) {
+	recurseZoneToRecords(zone, ignore, "", r)
+	close(r)
+}
+
+// ZonesToRecordConfigs converts ZoneData to dnscontrol RecordConfig
+func ZonesToRecordConfigs(zone *ZoneData, ignore string) []*models.RecordConfig {
+	r := make(chan *models.RecordConfig)
+	go zoneToRecords(zone, ignore, r)
+	var recs []*models.RecordConfig
+	for rr := range r {
+		recs = append(recs, rr)
+	}
+	return recs
+}
+
 // ReadDataFile reads a tinydns data file and returns an array of zones & records
-func ReadDataFile(zonename string, r io.Reader) []dns.RR {
+func ReadDataFile(zonename string, r io.Reader) ZoneData {
 	var foundRecords []dns.RR
 	rrs := make(chan dns.RR)
+	var zones ZoneData
 
-	go parseDataFile(zonename, r, rrs)
+	go parseDataFile(r, rrs)
 
 	for rec := range rrs {
-		foundRecords = append(foundRecords, rec)
+		switch rec.(type) {
+		case *dns.SOA:
+			addZone(&zones, rec)
+		default:
+			foundRecords = append(foundRecords, rec)
+		}
 	}
-	// Get each SOA records
-	// create Zone for each SOA record
-	// add records to zone based on longest string match
-	return foundRecords
+
+	return splitRecords(&zones, foundRecords)
 }
 
 func createARecord(fqdn, ip string, ttl uint32) dns.RR {
@@ -147,19 +164,7 @@ func createSOARecord(fqdn, nameserver, mbox string, ttl uint32) dns.RR {
 	return r
 }
 
-func parseTinydnsName(fqdn, name, sub string) string {
-	if !strings.Contains(name, ".") {
-		return strings.Join([]string{name, sub, fqdn}, ".")
-	}
-	return name
-}
-
-func parseTTL(t string) uint32 {
-	ttl, _ := strconv.ParseUint(t, 10, 32)
-	return uint32(ttl)
-}
-
-func lineToRecord(line, origin string, rrs chan dns.RR) error {
+func lineToRecord(line string, rrs chan dns.RR) error {
 	var r dns.RR
 
 	if len(line) == 0 {
@@ -170,29 +175,19 @@ func lineToRecord(line, origin string, rrs chan dns.RR) error {
 	maxField := len(fields) - 1
 	ttlField := maxField
 
-	if !dns.IsSubDomain(origin, fqdn) {
-		return nil
-	}
-
 	switch line[0] {
 	case '.':
 		// fqdn:ip:x:ttl:timestamp:lo
-		if fqdn != origin {
-			return nil
-		}
 		nameserver := parseTinydnsName(fqdn, fields[2], "ns")
 		ttl := parseTTL(fields[3])
 
-		if len(fields[1]) != 0 && dns.IsSubDomain(origin, nameserver) {
+		if len(fields[1]) != 0 && dns.IsSubDomain(fqdn, nameserver) {
 			rrs <- createARecord(nameserver, fields[1], ttl)
 		}
 		rrs <- createSOARecord(fqdn, nameserver, "hostmaster."+fqdn, ttl)
 		rrs <- createNSRecord(fqdn, nameserver, ttl)
 		ttlField = 3
 	case 'Z':
-		if fqdn != origin {
-			return nil
-		}
 		r = createSOARecord(fqdn, fields[1], fields[2], 0)
 		for i := 3; i <= 8; i++ {
 			var v uint32
@@ -269,7 +264,7 @@ func lineToRecord(line, origin string, rrs chan dns.RR) error {
 	case '&':
 		ttl := parseTTL(fields[3])
 		nameserver := parseTinydnsName(fqdn, fields[2], "ns")
-		if len(fields[1]) != 0 && dns.IsSubDomain(origin, nameserver) {
+		if len(fields[1]) != 0 && dns.IsSubDomain(fqdn, nameserver) {
 			rrs <- createARecord(nameserver, fields[1], ttl)
 		}
 		rrs <- createNSRecord(fqdn, nameserver, ttl)
