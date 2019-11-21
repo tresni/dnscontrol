@@ -154,9 +154,10 @@ func readOctodns(zonename string, r io.Reader, filename string) []dns.RR {
 	return l
 }
 
-
 func readTinydns(zonename string, r io.Reader, filename string) []dns.RR {
-	return tinydns.ReadDataFile(zonename, r)
+	zones := tinydns.ReadDataFile(zonename, r)
+	z := tinydns.FindZone(&zones, zonename)
+	return z.Records
 }
 
 // pretty outputs the zonefile using the prettyprinter.

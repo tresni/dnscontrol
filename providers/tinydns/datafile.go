@@ -31,7 +31,7 @@ func (e *ReadError) Error() (s string) {
 // ZoneData is the holder for records for each SOA
 type ZoneData struct {
 	name     string
-	records  []dns.RR
+	Records  []dns.RR
 	children []*ZoneData
 	soa      dns.RR
 }
@@ -46,7 +46,8 @@ func parseDataFile(r io.Reader, rrs chan dns.RR) {
 	close(rrs)
 }
 
-func findZone(z *ZoneData, name string) *ZoneData {
+// FindZone finds a zone by name in a ZoneData structure
+func FindZone(z *ZoneData, name string) *ZoneData {
 	labels := dns.SplitDomainName(name)
 	soa, c := z, z
 	for i := len(labels) - 1; i >= 0 && c != nil; i-- {
@@ -86,8 +87,8 @@ func addZone(z *ZoneData, rr dns.RR) {
 
 func splitRecords(zone *ZoneData, rrs []dns.RR) ZoneData {
 	for _, r := range rrs {
-		z := findZone(zone, r.Header().Name)
-		z.records = append(z.records, r)
+		z := FindZone(zone, r.Header().Name)
+		z.Records = append(z.Records, r)
 	}
 	return *zone
 }
@@ -97,7 +98,7 @@ func recurseZoneToRecords(zone *ZoneData, ignore, origin string, r chan *models.
 		rec, _ := bind.RrToRecord(zone.soa, origin, 0)
 		r <- &rec
 	}
-	for _, rr := range zone.records {
+	for _, rr := range zone.Records {
 		rec, _ := bind.RrToRecord(rr, origin, 0)
 		r <- &rec
 	}
@@ -257,8 +258,9 @@ func lineToRecord(line string, rrs chan dns.RR) error {
 		ttl := parseTTL(fields[2])
 		r.(*dns.TXT).Hdr = dns.RR_Header{Name: fqdn, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: ttl}
 		data := string(deOctalString(fields[1]))
-		data = strings.ReplaceAll(data, "\r", "")
-		r.(*dns.TXT).Txt = strings.Split(data, "\n")
+		//data = strings.ReplaceAll(data, "\r", "")
+		//r.(*dns.TXT).Txt = strings.Split(data, "\n")
+		r.(*dns.TXT).Txt = []string{data}
 		rrs <- r
 		ttlField = 2
 	case '&':
@@ -357,7 +359,7 @@ func WriteDataFile(w io.Writer, records []*models.RecordConfig, origin string) e
 			//+fqdn:ip:ttl:timestamp:lo
 			fmt.Fprintf(w, "+%s:%s:%d\n", r.GetLabelFQDN(), r.GetTargetField(), r.TTL)
 		case "AAAA":
-			fmt.Fprintf(w, ":%s:28:%s:%d\n", r.GetLabelFQDN(), octalString(r.GetTargetIP()), r.TTL)
+			fmt.Fprintf(w, ":%s:28:%s:%d\n", r.GetLabelFQDN(), octalBuf(r.GetTargetIP()), r.TTL)
 		case "CAA":
 			fmt.Fprintf(w, ":%s:257:\\%03o\\%03d%s%s:%d\n", r.GetLabelFQDN(), r.CaaFlag, len(r.CaaTag), r.CaaTag, r.GetTargetField(), r.TTL)
 		case "CNAME":
@@ -388,14 +390,14 @@ func WriteDataFile(w io.Writer, records []*models.RecordConfig, origin string) e
 			if err != nil {
 				log.Fatalf("Unable to encode %s as hex string", r.GetTargetField())
 			}
-			fmt.Fprintf(w, ":%s:44:\\%03o\\%03o%s:%d\n", r.GetLabelFQDN(), r.SshfpAlgorithm, r.SshfpFingerprint, octalString(hex), r.TTL)
+			fmt.Fprintf(w, ":%s:44:\\%03o\\%03o%s:%d\n", r.GetLabelFQDN(), r.SshfpAlgorithm, r.SshfpFingerprint, octalBuf(hex), r.TTL)
 		case "TLSA":
 			fmt.Fprintf(w, ":%s:52:\\%03o\\%03o\\%03o%s:%d\n", r.GetLabelFQDN(), r.TlsaUsage, r.TlsaSelector, r.TlsaMatchingType, r.GetTargetField(), r.TTL)
 		case "TXT":
 			//'fqdn:s:ttl:timestamp:lo
 			//You may use octal \nnn codes to include arbitrary bytes inside s; for example, \072 is a colon.
 			//We can write multiple records, but we can't read them as tiny doesn't differentiate
-			fmt.Fprintf(w, "'%s:%s:%d\n", r.GetLabelFQDN(), escapeString(r.GetTargetField()), r.TTL)
+			fmt.Fprintf(w, "'%s:%s:%d\n", r.GetLabelFQDN(), octalString(escapeString(r.GetTargetField())), r.TTL)
 		}
 	}
 	return nil

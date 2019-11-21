@@ -25,15 +25,15 @@ func TestFindZone(t *testing.T) {
 	com := ZoneData{name: "com", children: []*ZoneData{&other}, soa: &dns.SOA{}}
 	zd := ZoneData{children: []*ZoneData{&com}}
 
-	if findZone(&zd, "another.com") != &other {
+	if FindZone(&zd, "another.com") != &other {
 		t.Error("Did not find another.com")
 	}
 
-	if findZone(&zd, "this.com") != &com {
+	if FindZone(&zd, "this.com") != &com {
 		t.Error("This should return com")
 	}
 
-	if findZone(&zd, "root.please") != &zd {
+	if FindZone(&zd, "root.please") != &zd {
 		t.Error("We should get the root Zone Data")
 	}
 }
@@ -51,12 +51,12 @@ func TestAddZone(t *testing.T) {
 		r.Hdr = dns.RR_Header{Name: zone, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 3600}
 		addZone(&z, r)
 	}
-	zone := findZone(&z, "this.is.a.long.label")
+	zone := FindZone(&z, "this.is.a.long.label")
 	if zone.name != "this" {
 		t.Error("We didn't get the right zone back!")
 	}
 
-	zone = findZone(&z, "thor.opendns.com")
+	zone = FindZone(&z, "thor.opendns.com")
 	if zone.name != "thor" {
 		t.Errorf("We didn't get thor back: %s", zone.name)
 	}

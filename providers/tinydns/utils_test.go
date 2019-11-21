@@ -6,7 +6,7 @@ import (
 
 func TestOctalString(t *testing.T) {
 	b := []byte{1, 2, 3, 4, 5}
-	s := octalString(b)
+	s := octalBuf(b)
 	if s != "\\001\\002\\003\\004\\005" {
 		t.Errorf("Bytes not properly encoded: %s", s)
 	}
@@ -17,6 +17,11 @@ func TestDeoctalString(t *testing.T) {
 	b := deOctalString(s)
 	if b[3] != 'd' && b[4] != '1' {
 		t.Error("Improperly decoded octal String")
+	}
+	s = "abc\\z"
+	b = deOctalString(s)
+	if s != string(b) {
+		t.Error("Improperly handling non-octal")
 	}
 }
 
@@ -71,11 +76,10 @@ func TestPackedName(t *testing.T) {
 
 func TestEscapeString(t *testing.T) {
 	s := "colons(:) and newlines (\r\n) need to be escaped."
-	e := escapeString(s)
+	e := octalString(escapeString(s))
 	if string(deOctalString(e)) != s {
-		t.Error("Can't encode/decode a string")
+		t.Errorf("Can't encode/decode a string %s", e)
 	}
-
 }
 
 func TestParseTinydnsName(t *testing.T) {
@@ -89,9 +93,17 @@ func TestParseTinydnsName(t *testing.T) {
 
 func TestParseTTL(t *testing.T) {
 	if parseTTL("1") != uint32(1) {
-		t.Error("Incorrectt parsing of integer string")
+		t.Error("Incorrect parsing of integer string")
 	}
 	if parseTTL("4294967295") != uint32(4294967295) {
 		t.Error("Incorrect parsing of uint32 max")
 	}
+}
+
+func TestBinaryData(t *testing.T) {
+	s := "DNSC\000\001\000\000Yz\365\364\265\207r\012m=\356\355\350vD\345\223\212\361\2164\333\242\001\353*\020hNt\036H\204i\227\223\302\001\246aOU\207\227\010U\076z\201\074V\352N/C\224t~C,C\215U\014\272\240\300\031\330\266\236\237\345\051T-\310\362\354\042PV\322\242\073h\367\337\244\012\203\2242P\300*qmIkhK7f\134-?\035\134-?\035^\016r\235"
+	x := octalString(s)
+	t.Log(x)
+	y := string(deOctalString(x))
+	t.Log(s == y)
 }

@@ -151,8 +151,8 @@ func (c *Tinydns) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Corre
 		fmt.Printf("\nCould not read zonefile: %v\n", err)
 	} else {
 		zones = ReadDataFile(dc.Name, foundFH)
-		fz := findZone(&zones, dc.Name)
-		records := fz.records
+		fz := FindZone(&zones, dc.Name)
+		records := fz.Records
 		if fz.soa != nil {
 			records = append(records, fz.soa)
 		}
