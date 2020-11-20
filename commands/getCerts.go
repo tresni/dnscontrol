@@ -7,11 +7,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/StackExchange/dnscontrol/models"
-	"github.com/StackExchange/dnscontrol/pkg/acme"
-	"github.com/StackExchange/dnscontrol/pkg/normalize"
-	"github.com/StackExchange/dnscontrol/pkg/printer"
-	"github.com/urfave/cli"
+	"github.com/StackExchange/dnscontrol/v3/models"
+	"github.com/StackExchange/dnscontrol/v3/pkg/acme"
+	"github.com/StackExchange/dnscontrol/v3/pkg/normalize"
+	"github.com/StackExchange/dnscontrol/v3/pkg/printer"
+	"github.com/urfave/cli/v2"
 )
 
 var _ = cmd(catUtils, func() *cli.Command {
@@ -26,6 +26,7 @@ var _ = cmd(catUtils, func() *cli.Command {
 	}
 }())
 
+// GetCertsArgs stores the flags and arguments common to cert commands
 type GetCertsArgs struct {
 	GetDNSConfigArgs
 	GetCredentialsArgs
@@ -50,69 +51,69 @@ func (args *GetCertsArgs) flags() []cli.Flag {
 	flags := args.GetDNSConfigArgs.flags()
 	flags = append(flags, args.GetCredentialsArgs.flags()...)
 
-	flags = append(flags, cli.StringFlag{
+	flags = append(flags, &cli.StringFlag{
 		Name:        "acme",
 		Destination: &args.ACMEServer,
 		Value:       "live",
-		Usage:       `ACME server to issue against. Give full directory endpoint. Can also use 'staging' or 'live' for standard Let's Encrpyt endpoints.`,
+		Usage:       `ACME server to issue against. Give full directory endpoint. Can also use 'staging' or 'live' for standard Let's Encrypt endpoints.`,
 	})
-	flags = append(flags, cli.IntFlag{
+	flags = append(flags, &cli.IntFlag{
 		Name:        "renew",
 		Destination: &args.RenewUnderDays,
 		Value:       15,
 		Usage:       `Renew certs with less than this many days remaining`,
 	})
-	flags = append(flags, cli.StringFlag{
+	flags = append(flags, &cli.StringFlag{
 		Name:        "dir",
 		Destination: &args.CertDirectory,
 		Value:       ".",
 		Usage:       `Directory to store certificates and other data`,
 	})
-	flags = append(flags, cli.StringFlag{
+	flags = append(flags, &cli.StringFlag{
 		Name:        "certConfig",
 		Destination: &args.CertsFile,
 		Value:       "certs.json",
 		Usage:       `Json file containing list of certificates to issue`,
 	})
-	flags = append(flags, cli.StringFlag{
+	flags = append(flags, &cli.StringFlag{
 		Name:        "email",
 		Destination: &args.Email,
 		Value:       "",
 		Usage:       `Email to register with let's encrypt`,
 	})
-	flags = append(flags, cli.BoolFlag{
+	flags = append(flags, &cli.BoolFlag{
 		Name:        "agreeTOS",
 		Destination: &args.AgreeTOS,
 		Usage:       `Must provide this to agree to Let's Encrypt terms of service`,
 	})
-	flags = append(flags, cli.BoolFlag{
+	flags = append(flags, &cli.BoolFlag{
 		Name:        "vault",
 		Destination: &args.Vault,
 		Usage:       `Store certificates as secrets in hashicorp vault instead of on disk.`,
 	})
-	flags = append(flags, cli.StringFlag{
+	flags = append(flags, &cli.StringFlag{
 		Name:        "vaultPath",
 		Destination: &args.VaultPath,
 		Value:       "/secret/certs",
 		Usage:       `Path in vault to store certificates`,
 	})
-	flags = append(flags, cli.StringFlag{
+	flags = append(flags, &cli.StringFlag{
 		Name:        "skip",
 		Destination: &args.IgnoredProviders,
 		Value:       "",
 		Usage:       `Provider names to not use for challenges (comma separated)`,
 	})
-	flags = append(flags, cli.BoolFlag{
+	flags = append(flags, &cli.BoolFlag{
 		Name:        "verbose",
 		Destination: &args.Verbose,
 		Usage:       "Enable detailed logging (deprecated: use the global -v flag)",
 	})
-	flags = append(flags, cli.BoolFlag{
+	flags = append(flags, &cli.BoolFlag{
 		Name:        "notify",
 		Destination: &args.Notify,
 		Usage:       `set to true to send notifications to configured destinations`,
 	})
-	flags = append(flags, cli.StringFlag{
+	flags = append(flags, &cli.StringFlag{
 		Name:        "only",
 		Destination: &args.Only,
 		Usage:       `Only check a single cert. Provide cert name.`,
@@ -120,14 +121,15 @@ func (args *GetCertsArgs) flags() []cli.Flag {
 	return flags
 }
 
+// GetCerts implements the get-certs command.
 func GetCerts(args GetCertsArgs) error {
 	fmt.Println(args.JSFile)
 	// check agree flag
 	if !args.AgreeTOS {
-		return fmt.Errorf("You must agree to the Let's Encrypt Terms of Service by using -agreeTOS")
+		return fmt.Errorf("you must agree to the Let's Encrypt Terms of Service by using -agreeTOS")
 	}
 	if args.Email == "" {
-		return fmt.Errorf("Must provide email to use for Let's Encrypt registration")
+		return fmt.Errorf("must provide email to use for Let's Encrypt registration")
 	}
 
 	// load dns config
@@ -135,9 +137,9 @@ func GetCerts(args GetCertsArgs) error {
 	if err != nil {
 		return err
 	}
-	errs := normalize.NormalizeAndValidateConfig(cfg)
+	errs := normalize.ValidateAndNormalizeConfig(cfg)
 	if PrintValidationErrors(errs) {
-		return fmt.Errorf("Exiting due to validation errors")
+		return fmt.Errorf("exiting due to validation errors")
 	}
 	notifier, err := InitializeProviders(args.CredsFile, cfg, args.Notify)
 	if err != nil {
@@ -161,7 +163,7 @@ func GetCerts(args GetCertsArgs) error {
 		return err
 	}
 	if len(certList) == 0 {
-		return fmt.Errorf("Must provide at least one certificate to issue in cert configuration")
+		return fmt.Errorf("must provide at least one certificate to issue in cert configuration")
 	}
 	if err = validateCertificateList(certList, cfg); err != nil {
 		return err
@@ -184,6 +186,7 @@ func GetCerts(args GetCertsArgs) error {
 	if err != nil {
 		return err
 	}
+	var manyerr error
 	for _, cert := range certList {
 		if args.Only != "" && cert.CertName != args.Only {
 			continue
@@ -194,11 +197,15 @@ func GetCerts(args GetCertsArgs) error {
 			notifier.Notify(cert.CertName, "certificate", "Issued new certificate", err, false)
 		}
 		if err != nil {
-			return err
+			if manyerr == nil {
+				manyerr = err
+			} else {
+				manyerr = fmt.Errorf("%w; %v", manyerr, err)
+			}
 		}
 	}
 	notifier.Done()
-	return nil
+	return manyerr
 }
 
 var validCertNamesRegex = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_\-]*$`)
@@ -207,7 +214,7 @@ func validateCertificateList(certs []*acme.CertConfig, cfg *models.DNSConfig) er
 	for _, cert := range certs {
 		name := cert.CertName
 		if !validCertNamesRegex.MatchString(name) {
-			return fmt.Errorf("'%s' is not a valud certificate name. Only alphanumerics, - and _ allowed", name)
+			return fmt.Errorf("'%s' is not a valid certificate name. Only alphanumerics, - and _ allowed", name)
 		}
 		sans := cert.Names
 		if len(sans) > 100 {

@@ -43,12 +43,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/StackExchange/dnscontrol/providers/bind"
-	"github.com/StackExchange/dnscontrol/providers/octodns/octoyaml"
-	"github.com/StackExchange/dnscontrol/providers/tinydns"
 	"github.com/miekg/dns"
 	"github.com/miekg/dns/dnsutil"
-	"github.com/pkg/errors"
+
+	"github.com/StackExchange/dnscontrol/v3/pkg/prettyzone"
+	"github.com/StackExchange/dnscontrol/v3/providers/octodns/octoyaml"
+	"github.com/StackExchange/dnscontrol/v3/providers/tinydns"
 )
 
 var flagInfmt = flag.String("in", "zone", "zone|octodns|tinydns")
@@ -86,7 +86,7 @@ func main() {
 
 	switch *flagOutfmt {
 	case "pretty":
-		bind.WriteZoneFile(os.Stdout, recs, zonename)
+		prettyzone.WriteZoneFileRR(os.Stdout, recs, zonename)
 	case "dsl":
 		fmt.Printf(`D("%s", %s, DnsProvider(%s)`, zonename, *flagRegText, *flagProviderText)
 		rrFormat(zonename, filename, recs, defTTL, true)
@@ -107,7 +107,7 @@ func parseargs(args []string) (zonename string, filename string, r io.Reader, er
 	// Anything else returns an error.
 
 	if len(args) < 2 {
-		return "", "", nil, errors.Errorf("no command line parameters. Zone name required")
+		return "", "", nil, fmt.Errorf("no command line parameters. Zone name required")
 	}
 
 	zonename = args[0]
@@ -119,25 +119,27 @@ func parseargs(args []string) (zonename string, filename string, r io.Reader, er
 		filename = flag.Arg(1)
 		r, err = os.Open(filename)
 		if err != nil {
-			return "", "", nil, errors.Wrapf(err, "Could not open file: %s", filename)
+			return "", "", nil, fmt.Errorf("could not open file: %s: %w", filename, err)
 		}
 	} else {
-		return "", "", nil, errors.Errorf("too many command line parameters")
+		return "", "", nil, fmt.Errorf("too many command line parameters")
 	}
 
 	return zonename, filename, r, nil
 }
 
 func readZone(zonename string, r io.Reader, filename string) []dns.RR {
-	var l []dns.RR
-	for x := range dns.ParseZone(r, zonename, filename) {
-		if x.Error != nil {
-			log.Println(x.Error)
-		} else {
-			l = append(l, x.RR)
-		}
+
+	zp := dns.NewZoneParser(r, zonename, filename)
+
+	var parsed []dns.RR
+	for rr, ok := zp.Next(); ok; rr, ok = zp.Next() {
+		parsed = append(parsed, rr)
 	}
-	return l
+	if err := zp.Err(); err != nil {
+		log.Fatalf("Error in zonefile: %v", err)
+	}
+	return parsed
 }
 
 func readOctodns(zonename string, r io.Reader, filename string) []dns.RR {
@@ -145,7 +147,7 @@ func readOctodns(zonename string, r io.Reader, filename string) []dns.RR {
 
 	foundRecords, err := octoyaml.ReadYaml(r, zonename)
 	if err != nil {
-		log.Println(errors.Wrapf(err, "can not get corrections"))
+		log.Println(fmt.Errorf("can not get corrections: %w", err))
 	}
 
 	for _, x := range foundRecords {
@@ -158,11 +160,6 @@ func readTinydns(zonename string, r io.Reader, filename string) []dns.RR {
 	zones := tinydns.ReadDataFile(zonename, r)
 	z := tinydns.FindZone(&zones, zonename)
 	return z.Records
-}
-
-// pretty outputs the zonefile using the prettyprinter.
-func writePretty(zonename string, recs []dns.RR, defaultTTL uint32) {
-	bind.WriteZoneFile(os.Stdout, recs, zonename)
 }
 
 // rrFormat outputs the zonefile in either DSL or TSV format.

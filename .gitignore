@@ -16,6 +16,8 @@ env.sh
 certs/
 spfcache*
 adzonedump.*
-zones/
+/zones/
 stack.sh
 .idea/
+*.nupkg
+.DS_Store

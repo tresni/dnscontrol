@@ -1,5 +1,13 @@
 'use strict';
 
+// If you edit this file, you must run `go generate` to embed this
+// file in the source code.
+
+// If you are heavily debugging this code, the "-dev" flag will
+// read this file directly instead of using the output of
+// `go generate`. You'll still need to run `go generate` before
+// you commit the changes.
+
 var conf = {
     registrars: [],
     dns_providers: [],
@@ -16,6 +24,12 @@ function initialize() {
         domains: [],
     };
     defaultArgs = [];
+}
+
+// Returns an array of domains which were registered so far during runtime
+// Own function for compatibility reasons or if some day special processing would be required.
+function getConfiguredDomains() {
+    return conf.domain_names;
 }
 
 function NewRegistrar(name, type, meta) {
@@ -39,13 +53,15 @@ function NewDnsProvider(name, type, meta) {
 function newDomain(name, registrar) {
     return {
         name: name,
+        subdomain: '',
         registrar: registrar,
         meta: {},
         records: [],
         dnsProviders: {},
         defaultTTL: 0,
         nameservers: [],
-        ignored_labels: [],
+        ignored_names: [],
+        ignored_targets: [],
     };
 }
 
@@ -85,6 +101,46 @@ function D(name, registrar) {
     }
     conf.domains.push(domain);
     conf.domain_names.push(name);
+}
+
+// D_EXTEND(name): Update a DNS Domain already added with D(), or subdomain thereof
+function D_EXTEND(name) {
+    var domain = _getDomainObject(name);
+    if (domain == null) {
+        throw name + ' was not declared yet and therefore cannot be updated. Use D() before.';
+    }
+    domain.obj.subdomain = name.substr(0, name.length-domain.obj.name.length - 1);
+    for (var i = 0; i < defaultArgs.length; i++) {
+        processDargs(defaultArgs[i], domain.obj);
+    }
+    for (var i = 1; i < arguments.length; i++) {
+        var m = arguments[i];
+        processDargs(m, domain.obj);
+    }
+    conf.domains[domain.id] = domain.obj; // let's overwrite the object.
+}
+
+// _getDomainObject(name): This implements the domain matching
+// algorithm used by D_EXTEND(). Candidate matches are an exact match
+// of the domain's name, or if name is a proper subdomain of the
+// domain's name. The longest match is returned.
+function _getDomainObject(name) {
+    var domain = null;
+    var domainLen = 0;
+    for (var i = 0; i < conf.domains.length; i++) {
+        var thisName = conf.domains[i]["name"];
+        var desiredSuffix = "." + thisName;
+        var foundSuffix = name.substr(-desiredSuffix.length);
+        // If this is an exact match or the suffix matches...
+        if (name === thisName || foundSuffix === desiredSuffix) {
+            // If this match is a longer match than our current best match...
+            if (thisName.length > domainLen) {
+                domainLen = thisName.length;
+                domain = { id: i, obj: conf.domains[i] };
+            }
+        }
+    }
+    return domain;
 }
 
 // DEFAULTS provides a set of default arguments to apply to all future domains.
@@ -165,27 +221,56 @@ var AAAA = recordBuilder('AAAA');
 // ALIAS(name,target, recordModifiers...)
 var ALIAS = recordBuilder('ALIAS');
 
+// AZURE_ALIAS(name, type, target, recordModifiers...)
+var AZURE_ALIAS = recordBuilder('AZURE_ALIAS', {
+    args: [
+        ['name', _.isString],
+        ['type', validateAzureAliasType],
+        ['target', _.isString],
+    ],
+    transform: function(record, args, modifier) {
+        record.name = args.name;
+        record.target = args.target;
+        if (_.isObject(record.azure_alias)) {
+            record.azure_alias['type'] = args.type;
+        } else {
+            record.azure_alias = { type: args.type };
+        }
+    },
+});
+
+function validateAzureAliasType(value) {
+    if (!_.isString(value)) {
+        return false;
+    }
+    return ['A', 'AAAA', 'CNAME'].indexOf(value) !== -1;
+}
+
 // R53_ALIAS(name, target, type, recordModifiers...)
 var R53_ALIAS = recordBuilder('R53_ALIAS', {
-    args: [['name', _.isString], ['type', validateR53AliasType], ['target', _.isString]],
-    transform: function (record, args, modifiers) {
+    args: [
+        ['name', _.isString],
+        ['type', validateR53AliasType],
+        ['target', _.isString],
+    ],
+    transform: function(record, args, modifiers) {
         record.name = args.name;
         record.target = args.target;
         if (_.isObject(record.r53_alias)) {
             record.r53_alias['type'] = args.type;
         } else {
-            record.r53_alias = { 'type': args.type };
+            record.r53_alias = { type: args.type };
         }
     },
 });
 
 // R53_ZONE(zone_id)
 function R53_ZONE(zone_id) {
-    return function (r) {
+    return function(r) {
         if (_.isObject(r.r53_alias)) {
             r.r53_alias['zone_id'] = zone_id;
         } else {
-            r.r53_alias = { 'zone_id': zone_id }
+            r.r53_alias = { zone_id: zone_id };
         }
     };
 }
@@ -194,13 +279,30 @@ function validateR53AliasType(value) {
     if (!_.isString(value)) {
         return false;
     }
-    return ['A', 'AAAA', 'CNAME', 'CAA', 'MX', 'TXT', 'PTR', 'SPF', 'SRV', 'NAPTR'].indexOf(value) != -1;
+    return (
+        [
+            'A',
+            'AAAA',
+            'CNAME',
+            'CAA',
+            'MX',
+            'TXT',
+            'PTR',
+            'SPF',
+            'SRV',
+            'NAPTR',
+        ].indexOf(value) !== -1
+    );
 }
 
 // CAA(name,tag,value, recordModifiers...)
 var CAA = recordBuilder('CAA', {
     // TODO(tlim): It should be an error if value is not 0 or 128.
-    args: [['name', _.isString], ['tag', _.isString], ['value', _.isString]],
+    args: [
+        ['name', _.isString],
+        ['tag', _.isString],
+        ['value', _.isString],
+    ],
     transform: function(record, args, modifiers) {
         record.name = args.name;
         record.caatag = args.tag;
@@ -213,6 +315,25 @@ var CAA = recordBuilder('CAA', {
 
 // CNAME(name,target, recordModifiers...)
 var CNAME = recordBuilder('CNAME');
+
+// DS(name, keytag, algorithm, digestype, digest)
+var DS = recordBuilder("DS", {
+    args: [
+        ['name', _.isString],
+        ['keytag', _.isNumber],
+        ['algorithm', _.isNumber],
+        ['digesttype', _.isNumber],
+        ['digest', _.isString]
+    ],
+    transform: function(record, args, modifiers) {
+        record.name = args.name;
+        record.dskeytag = args.keytag;
+        record.dsalgorithm = args.algorithm;
+        record.dsdigesttype = args.digesttype;
+        record.dsdigest = args.digest;
+        record.target = args.target;
+    },
+});
 
 // PTR(name,target, recordModifiers...)
 var PTR = recordBuilder('PTR');
@@ -295,9 +416,18 @@ function isStringOrArray(x) {
     return _.isString(x) || _.isArray(x);
 }
 
+
+// AUTOSPLIT is a modifier that instructs the Go-level code to
+// split this TXT record's target into chunks of 255.
+var AUTOSPLIT = { txtSplitAlgorithm: 'multistring' }; // Create 255-byte chunks
+//var TXTMULTISPACE = { txtSplitAlgorithm: 'space' }; // Split on space [not implemented]
+
 // TXT(name,target, recordModifiers...)
 var TXT = recordBuilder('TXT', {
-    args: [['name', _.isString], ['target', isStringOrArray]],
+    args: [
+        ['name', _.isString],
+        ['target', isStringOrArray],
+    ],
     transform: function(record, args, modifiers) {
         record.name = args.name;
         // Store the strings twice:
@@ -337,8 +467,8 @@ var NS = recordBuilder('NS');
 
 // NAMESERVER(name,target)
 function NAMESERVER(name) {
-    if (arguments.length != 1){
-        throw("NAMESERVER only accepts one argument for name.")
+    if (arguments.length != 1) {
+        throw 'NAMESERVER only accepts one argument for name.';
     }
     return function(d) {
         d.nameservers.push({ name: name });
@@ -350,7 +480,7 @@ function NAMESERVER_TTL(v) {
     if (_.isString(v)) {
         v = stringToDuration(v);
     }
-    return {ns_ttl: v.toString()};
+    return { ns_ttl: v.toString() };
 }
 
 function format_tt(transform_table) {
@@ -387,10 +517,24 @@ function format_tt(transform_table) {
 
 // IGNORE(name)
 function IGNORE(name) {
-    return function (d) {
-        d.ignored_labels.push(name);
+    // deprecated, use IGNORE_NAME
+    return IGNORE_NAME(name);
+}
+
+// IGNORE_NAME(name)
+function IGNORE_NAME(name) {
+    return function(d) {
+        d.ignored_names.push(name);
     };
 }
+
+// IGNORE_TARGET(target)
+function IGNORE_TARGET(target, rType) {
+    return function(d) {
+        d.ignored_targets.push({pattern: target, type: rType});
+    };
+}
+
 
 // IMPORT_TRANSFORM(translation_table, domain)
 var IMPORT_TRANSFORM = recordBuilder('IMPORT_TRANSFORM', {
@@ -411,6 +555,23 @@ function PURGE(d) {
 // NO_PURGE()
 function NO_PURGE(d) {
     d.KeepUnknown = true;
+}
+
+// AUTODNSSEC
+// Permitted values are:
+// ""  Do not modify the setting (the default)
+// "on"   Enable AUTODNSSEC for this domain
+// "off"  Disable AUTODNSSEC for this domain
+function AUTODNSSEC_ON(d) {
+  d.auto_dnssec = "on";
+}
+function AUTODNSSEC_OFF(d) {
+  d.auto_dnssec = "off";
+}
+function AUTODNSSEC(d) {
+  console.log(
+    "WARNING: AUTODNSSEC is deprecated. It is now a no-op.  Please use AUTODNSSEC_ON or AUTODNSSEC_OFF. The default is to make no modifications. This message will disappear in a future release."
+  );
 }
 
 /**
@@ -520,6 +681,17 @@ function recordBuilder(type, opts) {
             opts.applyModifier(record, modifiers);
             opts.transform(record, parsedArgs, modifiers);
 
+            // Handle D_EXTEND() with subdomains.
+            if (d.subdomain && record.type != 'CF_REDIRECT' &&
+                    record.type != 'CF_TEMP_REDIRECT') {
+                record.subdomain = d.subdomain;
+                if (record.name == '@') {
+                    record.name = d.subdomain;
+                } else {
+                    record.name += '.' + d.subdomain;
+                }
+            }
+
             d.records.push(record);
             return record;
         };
@@ -589,7 +761,7 @@ function num2dot(num) {
     var d = num % 256;
     for (var i = 3; i > 0; i--) {
         num = Math.floor(num / 256);
-        d = num % 256 + '.' + d;
+        d = (num % 256) + '.' + d;
     }
     return d;
 }
@@ -652,6 +824,8 @@ var FRAME = recordBuilder('FRAME');
 // ttl: The time for TTL, integer or string. (default: not defined, using DefaultTTL)
 // split: The template for additional records to be created (default: '_spf%d')
 // flatten: A list of domains to be flattened.
+// overhead1: Amout of "buffer room" to reserve on the first item in the spf chain.
+// txtMaxSize: The maximum size for each TXT string. Values over 255 will result in multiple strings (default: '255')
 
 function SPF_BUILDER(value) {
     if (!value.parts || value.parts.length < 2) {
@@ -660,7 +834,7 @@ function SPF_BUILDER(value) {
     if (!value.label) {
         value.label = '@';
     }
-    if (!value.raw) {
+    if (!value.raw && value.raw !== '') {
         value.raw = '_rawspf';
     }
 
@@ -671,10 +845,15 @@ function SPF_BUILDER(value) {
     // If flattening is requested, generate a TXT record with the raw SPF settings.
     if (value.flatten && value.flatten.length > 0) {
         p.flatten = value.flatten.join(',');
-        if (value.ttl) {
-            r.push(TXT(value.raw, rawspf, TTL(value.ttl)));
-        } else {
-            r.push(TXT(value.raw, rawspf));
+        // Only add the raw spf record if it isn't an empty string
+        if (value.raw !== '') {
+            rp = {};
+            rp.txtSplitAlgorithm = 'multistring'; // Split the target if needed.
+            if (value.ttl) {
+                r.push(TXT(value.raw, rawspf, rp, TTL(value.ttl)));
+            } else {
+                r.push(TXT(value.raw, rawspf, rp));
+            }
         }
     }
 
@@ -682,6 +861,16 @@ function SPF_BUILDER(value) {
     if (value.overflow) {
         p.split = value.overflow;
     }
+
+    if (value.overhead1) {
+        p.overhead1 = value.overhead1;
+    }
+
+    if (value.txtMaxSize) {
+        p.txtMaxSize = value.txtMaxSize;
+    }
+
+    p.txtSplitAlgorithm = 'multistring'; // Split the target if needed.
 
     // Generate a TXT record with the metaparameters.
     if (value.ttl) {
@@ -705,12 +894,16 @@ function CAA_BUILDER(value) {
         value.label = '@';
     }
 
-    if (value.issue && value.issue == 'none')
-        value.issue = [ ";" ];
-    if (value.issuewild && value.issuewild == 'none')
-        value.issuewild = [ ";" ];
+    if (value.issue && value.issue == 'none') value.issue = [';'];
+    if (value.issuewild && value.issuewild == 'none') value.issuewild = [';'];
 
-    if ( (!value.issue && !value.issuewild) || ((value.issue && value.issue.length == 0) && (value.issuewild && value.issuewild.length == 0)) ) {
+    if (
+        (!value.issue && !value.issuewild) ||
+        (value.issue &&
+            value.issue.length == 0 &&
+            value.issuewild &&
+            value.issuewild.length == 0)
+    ) {
         throw 'CAA_BUILDER requires at least one entry at issue or issuewild';
     }
 
@@ -718,19 +911,19 @@ function CAA_BUILDER(value) {
 
     if (value.iodef) {
         if (value.iodef_critical) {
-            r.push(CAA(value.label, "iodef", value.iodef, CAA_CRITICAL));
+            r.push(CAA(value.label, 'iodef', value.iodef, CAA_CRITICAL));
         } else {
-            r.push(CAA(value.label, "iodef", value.iodef));
+            r.push(CAA(value.label, 'iodef', value.iodef));
         }
     }
 
     if (value.issue)
         for (var i = 0, len = value.issue.length; i < len; i++)
-            r.push(CAA(value.label, "issue", value.issue[i]));
+            r.push(CAA(value.label, 'issue', value.issue[i]));
 
     if (value.issuewild)
         for (var i = 0, len = value.issuewild.length; i < len; i++)
-            r.push(CAA(value.label, "issuewild", value.issuewild[i]));
+            r.push(CAA(value.label, 'issuewild', value.issuewild[i]));
 
     return r;
 }
@@ -742,4 +935,25 @@ function DKIM(arr) {
     for (var i = 0, len = arr.length; i < len; i += chunkSize)
         R.push(arr.slice(i, i + chunkSize));
     return R;
+}
+
+// Function wrapper for glob() for recursively loading files.
+// As the main function (in Go) is in our control anyway, all the values here are already sanity-checked.
+// Note: glob() is only an internal undocumented helper function. So use it on your own risk.
+function require_glob() {
+    arguments[2] = "js"; // force to only include .js files.
+    var files = glob.apply(null, arguments);
+    for (i = 0; i < files.length; i++) {
+        require(files[i]);
+    }
+    return files
+}
+
+// Set default values for CLI variables
+function CLI_DEFAULTS(defaults) {
+    for (var key in defaults) {
+        if (typeof this[key] === "undefined") {
+            this[key] = defaults[key]
+        }
+    }
 }

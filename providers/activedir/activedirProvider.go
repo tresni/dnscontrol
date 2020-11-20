@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/StackExchange/dnscontrol/providers"
-	"github.com/pkg/errors"
+	"github.com/StackExchange/dnscontrol/v3/providers"
 )
 
 // This is the struct that matches either (or both) of the Registrar and/or DNSProvider interfaces:
-type adProvider struct {
+type activedirProvider struct {
 	adServer string
 	fake     bool
 	psOut    string
@@ -25,6 +24,7 @@ var features = providers.DocumentationNotes{
 	providers.DocCreateDomains:       providers.Cannot("AD depends on the zone already existing on the dns server"),
 	providers.DocDualHost:            providers.Cannot("This driver does not manage NS records, so should not be used for dual-host scenarios"),
 	providers.DocOfficiallySupported: providers.Can(),
+	providers.CanGetZones:            providers.Unimplemented(),
 }
 
 // Register with the dnscontrol system.
@@ -39,7 +39,7 @@ func newDNS(config map[string]string, metadata json.RawMessage) (providers.DNSSe
 	if fVal := config["fakeps"]; fVal == "true" {
 		fake = true
 	} else if fVal != "" && fVal != "false" {
-		return nil, errors.Errorf("fakeps value must be 'true' or 'false'")
+		return nil, fmt.Errorf("fakeps value must be 'true' or 'false'")
 	}
 
 	psOut, psLog := config["psout"], config["pslog"]
@@ -50,14 +50,14 @@ func newDNS(config map[string]string, metadata json.RawMessage) (providers.DNSSe
 		psLog = "powershell.log"
 	}
 
-	p := &adProvider{psLog: psLog, psOut: psOut, fake: fake}
+	p := &activedirProvider{psLog: psLog, psOut: psOut, fake: fake}
 	if fake {
 		return p, nil
 	}
 	if runtime.GOOS == "windows" {
 		srv := config["ADServer"]
 		if srv == "" {
-			return nil, errors.Errorf("ADServer required for Active Directory provider")
+			return nil, fmt.Errorf("ADServer required for Active Directory provider")
 		}
 		p.adServer = srv
 		return p, nil

@@ -6,9 +6,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/StackExchange/dnscontrol/models"
+	"github.com/StackExchange/dnscontrol/v3/models"
 	"github.com/miekg/dns/dnsutil"
-	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -24,9 +23,7 @@ func WriteYaml(w io.Writer, records models.Records, origin string) error {
 
 	// Make a copy of the records, since we want to sort and muck with them.
 	recsCopy := models.Records{}
-	for _, r := range records {
-		recsCopy = append(recsCopy, r)
-	}
+	recsCopy = append(recsCopy, records...)
 	for _, r := range recsCopy {
 		if r.GetLabel() == "@" {
 			//r.Name = ""
@@ -178,7 +175,7 @@ func oneLabel(records models.Records) yaml.MapItem {
 		case "MX", "SRV":
 			// Always processed as a complex{}
 		default:
-			panic(errors.Errorf("yamlwrite:oneLabel:len1 rtype not implemented: %s", rtype))
+			panic(fmt.Errorf("yamlwrite:oneLabel:len1 rtype not implemented: %s", rtype))
 		}
 	}
 
@@ -199,7 +196,7 @@ func oneLabel(records models.Records) yaml.MapItem {
 		case "MX", "SRV":
 			// Always processed as a complex{}
 		default:
-			panic(errors.Errorf("oneLabel:many rtype not implemented: %s", rtype))
+			panic(fmt.Errorf("oneLabel:many rtype not implemented: %s", rtype))
 		}
 	}
 
@@ -286,7 +283,7 @@ func oneType(records models.Records) interface{} {
 		return vv
 
 	default:
-		panic(errors.Errorf("yamlwrite:oneType rtype=%s not implemented", rtype))
+		panic(fmt.Errorf("yamlwrite:oneType rtype=%s not implemented", rtype))
 	}
 }
 

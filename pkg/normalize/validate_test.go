@@ -5,38 +5,43 @@ import (
 
 	"fmt"
 
-	"github.com/StackExchange/dnscontrol/models"
+	"github.com/StackExchange/dnscontrol/v3/models"
+	"github.com/StackExchange/dnscontrol/v3/providers"
 )
 
 func TestCheckLabel(t *testing.T) {
 	var tests = []struct {
 		label       string
 		rType       string
+		target      string
 		isError     bool
 		hasSkipMeta bool
 	}{
-		{"@", "A", false, false},
-		{"foo.bar", "A", false, false},
-		{"_foo", "A", true, false},
-		{"_foo", "SRV", false, false},
-		{"_foo", "TLSA", false, false},
-		{"_foo", "TXT", false, false},
-		{"test.foo.tld", "A", true, false},
-		{"test.foo.tld", "A", false, true},
+		{"@", "A", "zap", false, false},
+		{"foo.bar", "A", "zap", false, false},
+		{"_foo", "A", "zap", false, false},
+		{"_foo", "SRV", "zap", false, false},
+		{"_foo", "TLSA", "zap", false, false},
+		{"_foo", "TXT", "zap", false, false},
+		{"_y2", "CNAME", "foo", false, false},
+		{"s1._domainkey", "CNAME", "foo", false, false},
+		{"_y3", "CNAME", "asfljds.acm-validations.aws.", false, false},
+		{"test.foo.tld", "A", "zap", true, false},
+		{"test.foo.tld", "A", "zap", false, true},
 	}
 
-	for _, test := range tests {
+	for i, test := range tests {
 		t.Run(fmt.Sprintf("%s %s", test.label, test.rType), func(t *testing.T) {
 			meta := map[string]string{}
 			if test.hasSkipMeta {
 				meta["skip_fqdn_check"] = "true"
 			}
-			err := checkLabel(test.label, test.rType, "foo.tld", meta)
+			err := checkLabel(test.label, test.rType, test.target, "foo.tld", meta)
 			if err != nil && !test.isError {
-				t.Errorf(" Expected no error but got %s", err)
+				t.Errorf("%02d: Expected no error but got %s", i, err)
 			}
 			if err == nil && test.isError {
-				t.Errorf(" Expected error but got none")
+				t.Errorf("%02d: Expected error but got none", i)
 			}
 		})
 
@@ -207,7 +212,7 @@ func TestCAAValidation(t *testing.T) {
 			},
 		},
 	}
-	errs := NormalizeAndValidateConfig(config)
+	errs := ValidateAndNormalizeConfig(config)
 	if len(errs) != 1 {
 		t.Error("Expect error on invalid CAA but got none")
 	}
@@ -274,8 +279,89 @@ func TestTLSAValidation(t *testing.T) {
 			},
 		},
 	}
-	errs := NormalizeAndValidateConfig(config)
+	errs := ValidateAndNormalizeConfig(config)
 	if len(errs) != 1 {
 		t.Error("Expect error on invalid TLSA but got none")
 	}
+}
+
+const (
+	ProviderNoDS        = "NO_DS_SUPPORT"
+	ProviderFullDS      = "FULL_DS_SUPPORT"
+	ProviderChildDSOnly = "CHILD_DS_SUPPORT"
+	ProviderBothDSCaps  = "BOTH_DS_CAPABILITIES"
+)
+
+func init() {
+	providers.RegisterDomainServiceProviderType(ProviderNoDS, nil, providers.DocumentationNotes{})
+	providers.RegisterDomainServiceProviderType(ProviderFullDS, nil, providers.DocumentationNotes{
+		providers.CanUseDS: providers.Can(),
+	})
+	providers.RegisterDomainServiceProviderType(ProviderChildDSOnly, nil, providers.DocumentationNotes{
+		providers.CanUseDSForChildren: providers.Can(),
+	})
+	providers.RegisterDomainServiceProviderType(ProviderBothDSCaps, nil, providers.DocumentationNotes{
+		providers.CanUseDS:            providers.Can(),
+		providers.CanUseDSForChildren: providers.Can(),
+	})
+}
+
+func Test_DSChecks(t *testing.T) {
+	t.Run("no DS support", func(t *testing.T) {
+		err := checkProviderDS(ProviderNoDS, nil)
+		if err == nil {
+			t.Errorf("Provider %s implements no DS capabilities, so should have failed the check", ProviderNoDS)
+		}
+	})
+
+	t.Run("full DS support", func(t *testing.T) {
+		apexDS := models.RecordConfig{Type: "DS"}
+		apexDS.SetLabel("@", "example.com")
+
+		childDS := models.RecordConfig{Type: "DS"}
+		childDS.SetLabel("child", "example.com")
+
+		records := models.Records{&apexDS, &childDS}
+
+		// check permutations of ProviderCanDS and having both DS caps
+		for _, pType := range []string{ProviderFullDS, ProviderBothDSCaps} {
+			err := checkProviderDS(pType, records)
+			if err != nil {
+				t.Errorf("Provider %s implements full DS capabilities and should process the provided records", ProviderFullDS)
+			}
+		}
+	})
+
+	t.Run("child DS support only", func(t *testing.T) {
+		apexDS := models.RecordConfig{Type: "DS"}
+		apexDS.SetLabel("@", "example.com")
+
+		childDS := models.RecordConfig{Type: "DS"}
+		childDS.SetLabel("child", "example.com")
+
+		// this record is included at the apex to check the Type of the
+		// recordset is verified to only inspect records with type == DS
+		apexA := models.RecordConfig{Type: "A"}
+		apexA.SetLabel("@", "example.com")
+
+		t.Run("accepts when child DS records only", func(t *testing.T) {
+			records := models.Records{&childDS, &apexA}
+			err := checkProviderDS(ProviderChildDSOnly, records)
+			if err != nil {
+				t.Errorf("Provider %s implements child DS support so the provided records should be accepted",
+					ProviderChildDSOnly,
+				)
+			}
+		})
+
+		t.Run("fails with apex and child DS records", func(t *testing.T) {
+			records := models.Records{&apexDS, &childDS, &apexA}
+			err := checkProviderDS(ProviderChildDSOnly, records)
+			if err == nil {
+				t.Errorf("Provider %s does not implement DS support at the zone apex, so should reject provided records",
+					ProviderChildDSOnly,
+				)
+			}
+		})
+	})
 }

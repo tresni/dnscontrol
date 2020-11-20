@@ -93,6 +93,9 @@ title: DNSControl
 				<li>
 					<a href="{{site.github.url}}/migrating">Migrating</a>: Migrating zones to DNSControl
 				</li>
+				<li>
+				    <a href="{{site.github.url}}/cli-variables">CLI variables</a>: Passing variables from CLI to JS
+				</li>
 			</ul>
 		</div>
 		<div class="col-md-4">
@@ -116,6 +119,9 @@ title: DNSControl
 				<li>
 					<a href="{{site.github.url}}/caa-builder">CAA Builder</a>: Build CAA records the easy way
 				</li>
+				<li>
+					<a href="{{site.github.url}}/get-certs">Let's Encrypt</a>: Renew your SSL/TLS certs
+				</li>
 			</ul>
 		</div>
 		<div class="col-md-4">
@@ -134,6 +140,9 @@ title: DNSControl
 				</li>
 				<li>
 					<a href="{{site.github.url}}/notifications">Notifications</a>: Be alerted when your domains are changed
+				</li>
+				<li>
+					<a href="{{site.github.url}}/code-tricks">Code Tricks</a>: Safely use macros and loops.
 				</li>
 
 			</ul>
@@ -162,6 +171,9 @@ title: DNSControl
 				</li>
 				<li>
 					<a href="{{site.github.url}}/release-engineering">Release Engineering</a>: How to build and ship a release
+				</li>
+				<li>
+					<a href="{{site.github.url}}/bug-triage">Bug Triage</a>: How bugs are triaged
 				</li>
 			</ul>
 		</div>

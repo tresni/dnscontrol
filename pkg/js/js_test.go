@@ -8,8 +8,7 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/tdewolff/minify"
-	minjson "github.com/tdewolff/minify/json"
+	testifyrequire "github.com/stretchr/testify/require"
 )
 
 const (
@@ -31,10 +30,8 @@ func TestParsedFiles(t *testing.T) {
 		if filepath.Ext(f.Name()) != ".js" || !unicode.IsNumber(rune(f.Name()[0])) {
 			continue
 		}
-		m := minify.New()
-		m.AddFunc("json", minjson.Minify)
 		t.Run(f.Name(), func(t *testing.T) {
-			conf, err := ExecuteJavascript(string(filepath.Join(testDir, f.Name())), true)
+			conf, err := ExecuteJavascript(string(filepath.Join(testDir, f.Name())), true, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -42,27 +39,14 @@ func TestParsedFiles(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			actualJSON, err = m.Bytes("json", actualJSON)
-			if err != nil {
-				t.Fatal(err)
-			}
 			expectedFile := filepath.Join(testDir, f.Name()[:len(f.Name())-3]+".json")
-			expectedData, err := ioutil.ReadFile(expectedFile)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			expectedJSON, err := m.String("json", string(expectedData))
+			expectedJSON, err := ioutil.ReadFile(expectedFile)
 			if err != nil {
 				t.Fatal(err)
 			}
 			es := string(expectedJSON)
 			as := string(actualJSON)
-			if es != as {
-				t.Errorf("Expected and actual json don't match: %s", f.Name())
-				t.Logf("Expected(%v): %s", len(es), es)
-				t.Logf("Actual  (%v): %s", len(as), as)
-			}
+			testifyrequire.JSONEqf(t, es, as, "EXPECTING %s", as)
 		})
 	}
 }
@@ -80,7 +64,7 @@ func TestErrors(t *testing.T) {
 	}
 	for _, tst := range tests {
 		t.Run(tst.desc, func(t *testing.T) {
-			if _, err := ExecuteJavascript(tst.text, true); err == nil {
+			if _, err := ExecuteJavascript(tst.text, true, nil); err == nil {
 				t.Fatal("Expected error but found none")
 			}
 		})

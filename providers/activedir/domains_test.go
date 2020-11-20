@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/StackExchange/dnscontrol/models"
+	"github.com/StackExchange/dnscontrol/v3/models"
 )
 
 func makeRC(label, domain, target string, rc models.RecordConfig) *models.RecordConfig {
@@ -15,7 +15,7 @@ func makeRC(label, domain, target string, rc models.RecordConfig) *models.Record
 
 func TestGetExistingRecords(t *testing.T) {
 
-	cf := &adProvider{}
+	cf := &activedirProvider{}
 
 	cf.fake = true
 	actual, err := cf.getExistingRecords("test2")
