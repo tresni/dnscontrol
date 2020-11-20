@@ -21,14 +21,15 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+
 	//	"strings"
 
 	//	"github.com/pkg/errors"
 
-	"github.com/StackExchange/dnscontrol/models"
-	"github.com/StackExchange/dnscontrol/providers"
-	"github.com/StackExchange/dnscontrol/providers/bind"
-	"github.com/StackExchange/dnscontrol/providers/diff"
+	"github.com/StackExchange/dnscontrol/v3/models"
+	"github.com/StackExchange/dnscontrol/v3/pkg/diff"
+	"github.com/StackExchange/dnscontrol/v3/providers"
+	"github.com/StackExchange/dnscontrol/v3/providers/bind"
 )
 
 var features = providers.DocumentationNotes{
@@ -66,20 +67,15 @@ func init() {
 	providers.RegisterDomainServiceProviderType("TINYDNS", initTinydns, features)
 }
 
-type soaInfo struct {
-	bind.SoaInfo
-	TTL uint32 `json:"ttl"`
-}
-
 // Tinydns is the provider handle for the Tinydns driver.
 type Tinydns struct {
 	//DefaultNS   []string `json:"default_ns"`
-	DefaultSoa soaInfo `json:"default_soa"`
+	DefaultSoa bind.SoaInfo `json:"default_soa"`
 	//nameservers []*models.Nameserver
 	directory string
 }
 
-func makeDefaultSOA(info soaInfo, origin string) *models.RecordConfig {
+func makeDefaultSOA(info bind.SoaInfo, origin string) *models.RecordConfig {
 	// Make a default SOA record in case one isn't found:
 	soaRec := models.RecordConfig{
 		Type: "SOA",
@@ -103,7 +99,14 @@ func makeDefaultSOA(info soaInfo, origin string) *models.RecordConfig {
 	if info.Minttl == 0 {
 		info.Minttl = 1440
 	}
-	soaRec.SetTarget(info.String())
+	soaRec.SetTargetSOA(
+		info.Ns,
+		info.Mbox,
+		info.Serial,
+		info.Refresh,
+		info.Retry,
+		info.Expire,
+		info.Minttl)
 	soaRec.TTL = info.TTL
 
 	return &soaRec
@@ -114,29 +117,7 @@ func (c *Tinydns) GetNameservers(string) ([]*models.Nameserver, error) {
 	return nil, nil
 }
 
-// GetDomainCorrections returns a list of corrections to update a domain.
-func (c *Tinydns) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Correction, error) {
-	dc.Punycode()
-	// Phase 1: Copy everything to []*models.RecordConfig:
-	//    expectedRecords < dc.Records[i]
-	//    foundRecords < zonefile
-	//
-	// Phase 2: Do any manipulations:
-	// add NS
-	// manipulate SOA
-	//
-	// Phase 3: Convert to []diff.Records and compare:
-	// expectedDiffRecords < expectedRecords
-	// foundDiffRecords < foundRecords
-	// diff.Inc...(foundDiffRecords, expectedDiffRecords )
-
-	// Default SOA record.  If we see one in the zone, this will be replaced.
-	soaRec := makeDefaultSOA(c.DefaultSoa, dc.Name)
-
-	// Read foundRecords:
-	foundRecords := make([]*models.RecordConfig, 0)
-	//var oldSerial, newSerial uint32
-
+func (c *Tinydns) readDataFile() (ZoneData, bool, error) {
 	if _, err := os.Stat(c.directory); os.IsNotExist(err) {
 		fmt.Printf("\nWARNING: Tinydns directory %q does not exist!\n", c.directory)
 	}
@@ -144,34 +125,64 @@ func (c *Tinydns) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Corre
 	var zones ZoneData
 	zonefile := filepath.Join(c.directory, "data")
 	foundFH, err := os.Open(zonefile)
-	zoneFileFound := err == nil
 	if err != nil && !os.IsNotExist(os.ErrNotExist) {
 		// Don't whine if the file doesn't exist. However all other
 		// errors will be reported.
 		fmt.Printf("\nCould not read zonefile: %v\n", err)
-	} else {
-		zones = ReadDataFile(dc.Name, foundFH)
-		fz := FindZone(&zones, dc.Name)
-		records := fz.Records
-		if fz.soa != nil {
-			records = append(records, fz.soa)
-		}
-		for _, r := range records {
-			rec, _ := bind.RrToRecord(r, dc.Name, 0)
-			foundRecords = append(foundRecords, &rec)
-		}
+		return zones, false, nil
+	}
+	zones = ReadDataFile(foundFH)
+	return zones, true, nil
+}
+
+// GetZoneRecords gets the records of a zone and returns them in RecordConfig format.
+func (c *Tinydns) GetZoneRecords(domain string) (models.Records, error) {
+	zones, _, _ := c.readDataFile()
+	return c.getZoneRecords(zones, domain)
+}
+
+func (c *Tinydns) getZoneRecords(zones ZoneData, domain string) (models.Records, error) {
+	// Read foundRecords:
+	foundRecords := make([]*models.RecordConfig, 0)
+
+	fz := FindZone(&zones, domain)
+	records := fz.Records
+	if fz.soa != nil {
+		records = append(records, fz.soa)
+	}
+	for _, r := range records {
+		rec := models.RRtoRC(r, domain)
+		foundRecords = append(foundRecords, &rec)
+	}
+
+	return foundRecords, nil
+}
+
+// GetDomainCorrections returns a list of corrections to update a domain.
+func (c *Tinydns) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Correction, error) {
+	dc.Punycode()
+	// Default SOA record.  If we see one in the zone, this will be replaced.
+	soaRec := makeDefaultSOA(c.DefaultSoa, dc.Name)
+
+	zones, zoneFileFound, _ := c.readDataFile()
+
+	foundRecords, err := c.GetZoneRecords(dc.Name)
+	if err != nil {
+		return nil, err
 	}
 
 	// Add SOA record to expected set:
-	if !dc.HasRecordTypeName("SOA", "@") {
+	if !dc.Records.HasRecordTypeName("SOA", "@") {
 		dc.Records = append(models.Records{soaRec}, dc.Records...)
 	}
 
-	// Normalize
 	models.PostProcessRecords(foundRecords)
 
 	differ := diff.New(dc)
-	_, create, del, mod := differ.IncrementalDiff(foundRecords)
+	_, create, del, mod, err := differ.IncrementalDiff(foundRecords)
+	if err != nil {
+		return nil, err
+	}
 
 	buf := &bytes.Buffer{}
 	// Print a list of changes. Generate an actual change that is the zone
@@ -196,7 +207,7 @@ func (c *Tinydns) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Corre
 	}
 	msg := fmt.Sprintf("GENERATE_ZONEFILE: %s\n", dc.Name)
 	if !zoneFileFound {
-		msg = msg + fmt.Sprintf(" (%d records)\n", len(create))
+		msg += fmt.Sprintf(" (%d records)\n", len(create))
 	}
 	msg += buf.String()
 	corrections := []*models.Correction{}
@@ -206,12 +217,13 @@ func (c *Tinydns) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Corre
 	models.PostProcessRecords(records)
 	/* Swap out dc.Records with the full dataset */
 	dc.Records = append(records, dc.Records...)
-	/* Now right out the data file */
+	/* Now write out the data file */
 	if changes {
 		corrections = append(corrections,
 			&models.Correction{
 				Msg: msg,
 				F: func() error {
+					zonefile := filepath.Join(c.directory, "data")
 					fmt.Printf("CREATING ZONEFILE: %v\n", zonefile)
 					zf, err := os.Create(zonefile)
 					if err != nil {

@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/StackExchange/dnscontrol/models"
-	"github.com/StackExchange/dnscontrol/providers/bind"
+	"github.com/StackExchange/dnscontrol/v3/models"
+
 	//"github.com/StackExchange/dnscontrol/providers/bind"
 	"github.com/miekg/dns"
 	"github.com/miekg/dns/dnsutil"
@@ -95,11 +95,15 @@ func splitRecords(zone *ZoneData, rrs []dns.RR) ZoneData {
 
 func recurseZoneToRecords(zone *ZoneData, ignore, origin string, r chan *models.RecordConfig) {
 	if zone.soa != nil {
-		rec, _ := bind.RrToRecord(zone.soa, origin, 0)
+		rec := models.RRtoRC(zone.soa, origin)
 		r <- &rec
 	}
 	for _, rr := range zone.Records {
-		rec, _ := bind.RrToRecord(rr, origin, 0)
+		if origin == "" {
+			log.Printf("Skipping record outside an SOA: %q", rr)
+			continue
+		}
+		rec := models.RRtoRC(rr, origin)
 		r <- &rec
 	}
 	for _, c := range zone.children {
@@ -124,7 +128,7 @@ func ZonesToRecordConfigs(zone *ZoneData, ignore string) []*models.RecordConfig 
 }
 
 // ReadDataFile reads a tinydns data file and returns an array of zones & records
-func ReadDataFile(zonename string, r io.Reader) ZoneData {
+func ReadDataFile(r io.Reader) ZoneData {
 	var foundRecords []dns.RR
 	rrs := make(chan dns.RR)
 	var zones ZoneData
@@ -350,7 +354,7 @@ func WriteDataFile(w io.Writer, records []*models.RecordConfig, origin string) e
 		switch r.Type {
 		case "SOA":
 			//Zfqdn:mname:rname:ser:ref:ret:exp:min:ttl:timestamp:lo
-			parts := strings.Fields(r.GetTargetField())
+			parts := strings.Fields(r.GetTargetCombined())
 			if parts[2] == "0" {
 				parts[2] = ""
 			}

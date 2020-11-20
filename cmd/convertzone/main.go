@@ -157,7 +157,7 @@ func readOctodns(zonename string, r io.Reader, filename string) []dns.RR {
 }
 
 func readTinydns(zonename string, r io.Reader, filename string) []dns.RR {
-	zones := tinydns.ReadDataFile(zonename, r)
+	zones := tinydns.ReadDataFile(r)
 	z := tinydns.FindZone(&zones, zonename)
 	return z.Records
 }

@@ -42,8 +42,8 @@ func TestAddZone(t *testing.T) {
 	var z ZoneData
 	zones := []string{
 		"this.is.a.long.label",
-		"opendns.com",
-		"thor.opendns.com",
+		"example.com",
+		"thor.example.com",
 	}
 
 	for _, zone := range zones {
@@ -56,7 +56,7 @@ func TestAddZone(t *testing.T) {
 		t.Error("We didn't get the right zone back!")
 	}
 
-	zone = FindZone(&z, "thor.opendns.com")
+	zone = FindZone(&z, "thor.example.com")
 	if zone.name != "thor" {
 		t.Errorf("We didn't get thor back: %s", zone.name)
 	}
