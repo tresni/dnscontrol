@@ -41,6 +41,7 @@ var features = providers.DocumentationNotes{
 	providers.CanUseTLSA:       providers.Can(),
 	providers.DocCreateDomains: providers.Can("Driver just maintains list of zone files. It should automatically add missing ones."),
 	providers.DocDualHost:      providers.Can(),
+	providers.CanGetZones:      providers.Can(),
 }
 
 func initTinydns(config map[string]string, providermeta json.RawMessage) (providers.DNSServiceProvider, error) {
