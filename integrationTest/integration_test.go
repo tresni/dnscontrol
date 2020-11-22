@@ -551,6 +551,19 @@ func only(n ...string) onlyFilter {
 	return onlyFilter{names: n}
 }
 
+// makeRange returns a string made up of chars from ascii code a to b.
+func makeRange(a, b uint8) string {
+	buf := make([]byte, b-a+1)
+	n := 0
+	amt := int(b) - int(a) + 1
+	for ; amt > 0; amt-- {
+		buf[n] = byte(a)
+		n++
+		a++
+	}
+	return string(buf)
+}
+
 //
 
 func makeTests(t *testing.T) []*TestGroup {
@@ -692,6 +705,25 @@ func makeTests(t *testing.T) []*TestGroup {
 			// These providers strip whitespace at the end of TXT records.
 			// TODO(tal): Add a check for this in normalize/validate.go
 			tc("Change a TXT with ws at end", txt("foo", "with space at end  ")),
+		),
+
+		testgroup("full byte range TXT",
+			// The RFCs permit TXT strings with any value 1..255. While
+			// possibly not a good thing, let's track which providers
+			// support it.
+			only("GCLOUD", "BIND"),
+			// These providers do not support this:
+			//not("BIND", "ROUTE53", "NAMEDOTCOM", "CLOUDFLAREAPI", "DIGITALOCEAN", "GANDI_V5"),
+			tc("txt with 1..255 values",
+				txt("long1", makeRange(0, 128)),
+				// miekg/dns sees these as 4 byte characters when it reads them in as it doesn't convert them from their escaped sequence, handles them fine on output
+				txt("long2", makeRange(129, 170)),
+				txt("long3", makeRange(171, 212)),
+				txt("long4", makeRange(213, 255)),
+			),
+			tc("txtmulti with 1..255 values",
+				txtmulti("long1", []string{makeRange(1, 128), makeRange(129, 170), makeRange(171, 212), makeRange(213, 255)}),
+			),
 		),
 
 		testgroup("empty TXT",
