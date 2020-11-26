@@ -150,14 +150,14 @@ func ReadDataFile(r io.Reader) ZoneData {
 func createARecord(fqdn, ip string, ttl uint32) dns.RR {
 	r := new(dns.A)
 	r.Hdr = dns.RR_Header{Name: fqdn, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: ttl}
-	r.A = net.ParseIP(ip)
+	r.A = net.ParseIP(strings.TrimSpace(ip))
 	return r
 }
 
 func createNSRecord(fqdn, nameserver string, ttl uint32) dns.RR {
 	r := new(dns.NS)
 	r.Hdr = dns.RR_Header{Name: fqdn, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: ttl}
-	r.Ns = nameserver
+	r.Ns = dnsutil.AddOrigin(nameserver, ".")
 	return r
 }
 
@@ -232,7 +232,7 @@ func lineToRecord(line string, rrs chan dns.RR) error {
 	case 'C':
 		r = new(dns.CNAME)
 		r.(*dns.CNAME).Hdr = dns.RR_Header{Name: fqdn, Rrtype: dns.TypeCNAME, Class: dns.ClassINET, Ttl: parseTTL(fields[2])}
-		r.(*dns.CNAME).Target = fields[1]
+		r.(*dns.CNAME).Target = dnsutil.AddOrigin(fields[1], ".")
 		rrs <- r
 		ttlField = 2
 	case '@':
@@ -248,13 +248,13 @@ func lineToRecord(line string, rrs chan dns.RR) error {
 			return &ReadError{"bad MX " + err.Error()}
 		}
 		r.(*dns.MX).Preference = uint16(val)
-		r.(*dns.MX).Mx = mx
+		r.(*dns.MX).Mx = dnsutil.AddOrigin(mx, ".")
 		rrs <- r
 	case '^':
 		r = new(dns.PTR)
 		ttl := parseTTL(fields[2])
 		r.(*dns.PTR).Hdr = dns.RR_Header{Name: fqdn, Rrtype: dns.TypePTR, Class: dns.ClassINET, Ttl: ttl}
-		r.(*dns.PTR).Ptr = fields[1]
+		r.(*dns.PTR).Ptr = dnsutil.AddOrigin(fields[1], ".")
 		rrs <- r
 		ttlField = 2
 	case '\'':
@@ -262,8 +262,9 @@ func lineToRecord(line string, rrs chan dns.RR) error {
 		ttl := parseTTL(fields[2])
 		r.(*dns.TXT).Hdr = dns.RR_Header{Name: fqdn, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: ttl}
 		data := string(deOctalString(fields[1]))
-		//data = strings.ReplaceAll(data, "\r", "")
-		//r.(*dns.TXT).Txt = strings.Split(data, "\n")
+		// TODO: tinydns autosplits at 255, so we should do that on import to represent the same behavior
+		// People should use AUTOSPLIT in their *.js files as tiny doesn't give the ability to split the
+		// string arbitraially
 		r.(*dns.TXT).Txt = []string{data}
 		rrs <- r
 		ttlField = 2

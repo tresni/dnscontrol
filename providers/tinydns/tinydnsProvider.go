@@ -30,6 +30,7 @@ import (
 	"github.com/StackExchange/dnscontrol/v3/pkg/diff"
 	"github.com/StackExchange/dnscontrol/v3/providers"
 	"github.com/StackExchange/dnscontrol/v3/providers/bind"
+	"github.com/miekg/dns/dnsutil"
 )
 
 var features = providers.DocumentationNotes{
@@ -39,6 +40,7 @@ var features = providers.DocumentationNotes{
 	providers.CanUseSRV:        providers.Can(),
 	providers.CanUseSSHFP:      providers.Can(),
 	providers.CanUseTLSA:       providers.Can(),
+	providers.CanUseTXTMulti:   providers.Can(),
 	providers.DocCreateDomains: providers.Can("Driver just maintains list of zone files. It should automatically add missing ones."),
 	providers.DocDualHost:      providers.Can(),
 	providers.CanGetZones:      providers.Can(),
@@ -52,6 +54,10 @@ func initTinydns(config map[string]string, providermeta json.RawMessage) (provid
 	}
 	if api.directory == "" {
 		api.directory = "zones"
+	}
+	err := api.readDataFile()
+	if err != nil {
+		return nil, err
 	}
 
 	if len(providermeta) != 0 {
@@ -73,7 +79,9 @@ type Tinydns struct {
 	//DefaultNS   []string `json:"default_ns"`
 	DefaultSoa bind.SoaInfo `json:"default_soa"`
 	//nameservers []*models.Nameserver
-	directory string
+	directory      string
+	zones          ZoneData
+	dataFileExists bool
 }
 
 func makeDefaultSOA(info bind.SoaInfo, origin string) *models.RecordConfig {
@@ -118,35 +126,34 @@ func (c *Tinydns) GetNameservers(string) ([]*models.Nameserver, error) {
 	return nil, nil
 }
 
-func (c *Tinydns) readDataFile() (ZoneData, bool, error) {
+func (c *Tinydns) readDataFile() error {
 	if _, err := os.Stat(c.directory); os.IsNotExist(err) {
 		fmt.Printf("\nWARNING: Tinydns directory %q does not exist!\n", c.directory)
 	}
 
-	var zones ZoneData
 	zonefile := filepath.Join(c.directory, "data")
 	foundFH, err := os.Open(zonefile)
-	if err != nil && !os.IsNotExist(os.ErrNotExist) {
+	if err != nil && !os.IsNotExist(err) {
 		// Don't whine if the file doesn't exist. However all other
 		// errors will be reported.
 		fmt.Printf("\nCould not read zonefile: %v\n", err)
-		return zones, false, nil
+		return err
 	}
-	zones = ReadDataFile(foundFH)
-	return zones, true, nil
+	c.zones = ReadDataFile(foundFH)
+	c.dataFileExists = err == nil
+	return nil
 }
 
 // GetZoneRecords gets the records of a zone and returns them in RecordConfig format.
 func (c *Tinydns) GetZoneRecords(domain string) (models.Records, error) {
-	zones, _, _ := c.readDataFile()
-	return c.getZoneRecords(zones, domain)
+	return c.getZoneRecords(domain)
 }
 
-func (c *Tinydns) getZoneRecords(zones ZoneData, domain string) (models.Records, error) {
+func (c *Tinydns) getZoneRecords(domain string) (models.Records, error) {
 	// Read foundRecords:
 	foundRecords := make([]*models.RecordConfig, 0)
 
-	fz := FindZone(&zones, domain)
+	fz := FindZone(&c.zones, domain)
 	records := fz.Records
 	if fz.soa != nil {
 		records = append(records, fz.soa)
@@ -165,7 +172,7 @@ func (c *Tinydns) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Corre
 	// Default SOA record.  If we see one in the zone, this will be replaced.
 	soaRec := makeDefaultSOA(c.DefaultSoa, dc.Name)
 
-	zones, zoneFileFound, _ := c.readDataFile()
+	zones, zoneFileFound := c.zones, c.dataFileExists
 
 	foundRecords, err := c.GetZoneRecords(dc.Name)
 	if err != nil {
@@ -245,4 +252,36 @@ func (c *Tinydns) GetDomainCorrections(dc *models.DomainConfig) ([]*models.Corre
 	}
 
 	return corrections, nil
+}
+
+func (c *Tinydns) recursiveListZones(zone *ZoneData, parent string, r chan string) {
+	name := dnsutil.AddOrigin(zone.name, parent)
+	if zone.soa != nil {
+		r <- name
+	}
+	for z := range zone.children {
+		c.recursiveListZones(zone.children[z], name, r)
+	}
+}
+
+func (c *Tinydns) listZones(r chan string) {
+	c.recursiveListZones(&c.zones, "", r)
+	close(r)
+}
+
+// ListZones lists zones
+func (c *Tinydns) ListZones() ([]string, error) {
+	if !c.dataFileExists {
+		return nil, nil
+	}
+	r := make(chan string)
+	var zones []string
+
+	go c.listZones(r)
+
+	for zone := range r {
+		zones = append(zones, zone)
+	}
+
+	return zones, nil
 }
