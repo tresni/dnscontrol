@@ -277,7 +277,7 @@ function stringToDuration(v) {
     if (matches == null) {
         throw v + ' is not a valid duration string';
     }
-    unit = 's';
+    var unit = 's';
     if (matches[2]) {
         unit = matches[2];
     }
@@ -802,7 +802,7 @@ function getENotationInt(x) {
        1cm = 1e0 == 16 (1^4 + 0) or 0<<4 + 0
        0cm = 0e0 == 0
     */
-    size = x * 100; // get cm value
+    var size = x * 100; // get cm value
 
     // Convert the number to scientific notation
     var exp = Math.floor(Math.log10(size)); // Get the exponent (base 10)
@@ -829,7 +829,7 @@ function getENotationInt(x) {
         exp = 9; // Cap exponent at 9
     }
     // convert it to 4bit:4bit uint8
-    m_e = (mantissa << 4) | (exp & 0xf);
+    var m_e = (mantissa << 4) | (exp & 0xf);
     return m_e;
 }
 
@@ -842,11 +842,11 @@ function locStringBuilder(record, args) {
     // it is a good sanity check to compare with later on down the chain
     // when you're in the weeds with maths.
     // Tests depend on it being present. Changes here must reflect in tests.
-    nsstring = '';
-    ewstring = '';
-    precisionbuffer = '';
-    ns = args.ns.toUpperCase();
-    ew = args.ew.toUpperCase();
+    var nsstring = '';
+    var ewstring = '';
+    var precisionbuffer = '';
+    var ns = args.ns.toUpperCase();
+    var ew = args.ew.toUpperCase();
 
     // Handle N/S coords - can use also s1.toFixed(3)
     nsstring =
@@ -911,18 +911,18 @@ function locStringBuilder(record, args) {
 // Renders LOC type internal properties from D˚M'S" parameters.
 // Change anything here at your peril.
 function locDMSBuilder(record, args) {
-    LOCEquator = Math.pow(2, 31); // RFC 1876, Section 2.
-    LOCPrimeMeridian = Math.pow(2, 31); // RFC 1876, Section 2.
-    LOCHours = 60 * 1000;
-    LOCDegrees = 60 * LOCHours;
-    LOCAltitudeBase = 100000;
+    var LOCEquator = Math.pow(2, 31); // RFC 1876, Section 2.
+    var LOCPrimeMeridian = Math.pow(2, 31); // RFC 1876, Section 2.
+    var LOCHours = 60 * 1000;
+    var LOCDegrees = 60 * LOCHours;
+    var LOCAltitudeBase = 100000;
 
-    lat = args.d1 * LOCDegrees + args.m1 * LOCHours + args.s1 * 1000;
-    lon = args.d2 * LOCDegrees + args.m2 * LOCHours + args.s2 * 1000;
-    if (ns == 'N') record.loclatitude = LOCEquator + lat;
+    var lat = args.d1 * LOCDegrees + args.m1 * LOCHours + args.s1 * 1000;
+    var lon = args.d2 * LOCDegrees + args.m2 * LOCHours + args.s2 * 1000;
+    if (args.ns.toUpperCase() == 'N') record.loclatitude = LOCEquator + lat;
     // S
     else record.loclatitude = LOCEquator - lat;
-    if (ew == 'E') record.loclongitude = LOCPrimeMeridian + lon;
+    if (args.ew.toUpperCase() == 'E') record.loclongitude = LOCPrimeMeridian + lon;
     // W
     else record.loclongitude = LOCPrimeMeridian - lon;
     // Altitude
@@ -937,7 +937,7 @@ function locDMSBuilder(record, args) {
     // Size
     record.locsize = getENotationInt(args.siz);
     // Horizontal Precision
-    m_e = args.hp;
+    var m_e = args.hp;
     record.lochorizpre = getENotationInt(args.hp);
 
     // Vertical Precision
@@ -1630,7 +1630,7 @@ function LOC_BUILDER_DD(value) {
     var lati = ConvertDDToDMS(value.x, false);
     var long = ConvertDDToDMS(value.y, true);
 
-    dms = { lati: lati, long: long };
+    var dms = { lati: lati, long: long };
 
     return LOC_builder_push(value, dms);
 }
@@ -1697,8 +1697,8 @@ function LOC_BUILDER_STR(value) {
 }
 
 function LOC_builder_push(value, dms) {
-    r = []; // The list of records to return.
-    p = {}; // The metaparameters to set on the LOC record.
+    var r = []; // The list of records to return.
+    var p = {}; // The metaparameters to set on the LOC record.
     // rawloc = "";
 
     // Generate a LOC record with the metaparameters.
@@ -1808,16 +1808,16 @@ function SPF_BUILDER(value) {
         value.raw = '_rawspf';
     }
 
-    r = []; // The list of records to return.
-    p = {}; // The metaparameters to set on the main TXT record.
-    rawspf = value.parts.join(' '); // The unaltered SPF settings.
+    var r = []; // The list of records to return.
+    var p = {}; // The metaparameters to set on the main TXT record.
+    var rawspf = value.parts.join(' '); // The unaltered SPF settings.
 
     // If flattening is requested, generate a TXT record with the raw SPF settings.
     if (value.flatten && value.flatten.length > 0) {
         p.flatten = value.flatten.join(',');
         // Only add the raw spf record if it isn't an empty string
         if (value.raw !== '') {
-            rp = {};
+            var rp = {};
             if (value.ttl) {
                 r.push(TXT(value.raw, rawspf, rp, TTL(value.ttl)));
             } else {

@@ -18,21 +18,21 @@
       "name": "3.2.1.in-addr.arpa",
       "records": [
         {
-          "filepos": "[line:7:5]",
+          "filepos": "[\u003ceval\u003e:7:8(24)]",
           "name": "1",
           "target": "foo.example.com.",
           "ttl": 300,
           "type": "PTR"
         },
         {
-          "filepos": "[line:8:5]",
+          "filepos": "[\u003ceval\u003e:8:8(28)]",
           "name": "2",
           "target": "bar.example.com.",
           "ttl": 300,
           "type": "PTR"
         },
         {
-          "filepos": "[line:9:5]",
+          "filepos": "[\u003ceval\u003e:9:8(37)]",
           "meta": {
             "skip_fqdn_check": "true"
           },
@@ -42,7 +42,7 @@
           "type": "PTR"
         },
         {
-          "filepos": "[line:14:5]",
+          "filepos": "[\u003ceval\u003e:14:8(47)]",
           "name": "4",
           "subdomain": "4",
           "target": "silly.example.com.",
@@ -50,7 +50,7 @@
           "type": "PTR"
         },
         {
-          "filepos": "[line:17:5]",
+          "filepos": "[\u003ceval\u003e:17:8(57)]",
           "name": "5",
           "subdomain": "5",
           "target": "willy.example.com.",
@@ -58,7 +58,7 @@
           "type": "PTR"
         },
         {
-          "filepos": "[line:20:5]",
+          "filepos": "[\u003ceval\u003e:20:8(69)]",
           "name": "6",
           "subdomain": "6",
           "target": "billy.example.com.",
@@ -66,21 +66,21 @@
           "type": "PTR"
         },
         {
-          "filepos": "[line:24:5]",
+          "filepos": "[\u003ceval\u003e:24:8(79)]",
           "name": "7",
           "target": "my.example.com.",
           "ttl": 300,
           "type": "PTR"
         },
         {
-          "filepos": "[line:27:5]",
+          "filepos": "[\u003ceval\u003e:27:8(89)]",
           "name": "8",
           "target": "fair.example.com.",
           "ttl": 300,
           "type": "PTR"
         },
         {
-          "filepos": "[line:30:5]",
+          "filepos": "[\u003ceval\u003e:30:8(104)]",
           "meta": {
             "skip_fqdn_check": "true"
           },

@@ -29,7 +29,7 @@
             },
             "KeyTag": 1
           },
-          "filepos": "[line:3:5]",
+          "filepos": "[\u003ceval\u003e:3:7(16)]",
           "name": "@",
           "name_raw": "@",
           "name_unicode": "@",
@@ -57,7 +57,7 @@
             },
             "KeyTag": 1000
           },
-          "filepos": "[line:2:5]",
+          "filepos": "[\u003ceval\u003e:2:7(9)]",
           "name": "@",
           "name_raw": "@",
           "name_unicode": "@",
