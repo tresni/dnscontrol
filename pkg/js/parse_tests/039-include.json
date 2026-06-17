@@ -19,7 +19,7 @@
       "name": "foo.com",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:5:6(22)]",
+          "filepos": "[<eval>:5:6(22)]",
           "name": "@",
           "target": "1.2.3.4",
           "ttl": 300,
@@ -43,14 +43,14 @@
       "name": "foo.com",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:5:6(22)]",
+          "filepos": "[<eval>:5:6(22)]",
           "name": "@",
           "target": "1.2.3.4",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:10:6(37)]",
+          "filepos": "[<eval>:10:6(37)]",
           "name": "local",
           "target": "127.0.0.1",
           "ttl": 300,

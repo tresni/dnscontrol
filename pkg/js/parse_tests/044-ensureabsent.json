@@ -11,7 +11,7 @@
       "name": "example.com",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:2:6(6)]",
+          "filepos": "[<eval>:2:6(6)]",
           "name": "normal",
           "target": "1.1.1.1",
           "ttl": 300,
@@ -20,7 +20,7 @@
       ],
       "recordsabsent": [
         {
-          "filepos": "[\u003ceval\u003e:3:6(12)]",
+          "filepos": "[<eval>:3:6(12)]",
           "name": "helper",
           "target": "2.2.2.2",
           "type": "A"

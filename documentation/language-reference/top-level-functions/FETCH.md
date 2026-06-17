@@ -11,7 +11,7 @@ ts_ignore: true
 
 Compared to `fetch` from Fetch API, `FETCH` will call [PANIC](PANIC.md) to terminate the execution of the script, and therefore DNSControl, if a network error occurs.
 
-Otherwise the syntax of `FETCH` is the same as `fetch`.
+Otherwise the syntax of `FETCH` is the same as `fetch`. The response object is a subset of the standard [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response): it provides `ok`, `status`, `statusText`, `url`, `headers.get(name)`, `headers.has(name)`, `text()`, and `json()`.
 
 `FETCH` is not enabled by default. Please read the warnings below.
 

@@ -23,7 +23,7 @@
             "Mbox": "user2.example.com.",
             "Txt": "mytxt.example.com."
           },
-          "filepos": "[\u003ceval\u003e:5:7(14)]",
+          "filepos": "[<eval>:5:7(14)]",
           "meta": {
             "skip_fqdn_check": "true"
           },
@@ -48,7 +48,7 @@
             "Mbox": "user2.example.com.",
             "Txt": "mytxt.example.com."
           },
-          "filepos": "[\u003ceval\u003e:4:7(8)]",
+          "filepos": "[<eval>:4:7(8)]",
           "meta": {
             "skip_fqdn_check": "true"
           },

@@ -11,7 +11,7 @@
       "name": "foo.com",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:4:6(16)]",
+          "filepos": "[<eval>:4:6(16)]",
           "meta": {
             "cloudflare_proxy": "ON"
           },

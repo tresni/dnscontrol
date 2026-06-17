@@ -11,7 +11,7 @@
       "name": "foo.com",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:2:10(11)]",
+          "filepos": "[<eval>:2:10(11)]",
           "name": "@",
           "naptrflags": "U",
           "naptrorder": 100,
@@ -23,7 +23,7 @@
           "type": "NAPTR"
         },
         {
-          "filepos": "[\u003ceval\u003e:3:10(20)]",
+          "filepos": "[<eval>:3:10(20)]",
           "name": "@",
           "naptrflags": "U",
           "naptrorder": 102,
@@ -35,7 +35,7 @@
           "type": "NAPTR"
         },
         {
-          "filepos": "[\u003ceval\u003e:4:10(29)]",
+          "filepos": "[<eval>:4:10(29)]",
           "name": "@",
           "naptrflags": "U",
           "naptrorder": 103,
@@ -47,7 +47,7 @@
           "type": "NAPTR"
         },
         {
-          "filepos": "[\u003ceval\u003e:5:10(38)]",
+          "filepos": "[<eval>:5:10(38)]",
           "name": "@",
           "naptrflags": "U",
           "naptrorder": 104,

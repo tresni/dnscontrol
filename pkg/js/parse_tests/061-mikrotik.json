@@ -11,7 +11,7 @@
       "name": "foo.com",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:2:17(11)]",
+          "filepos": "[<eval>:2:17(11)]",
           "meta": {
             "address_list": "vpn-list",
             "match_subdomain": "true",
@@ -23,7 +23,7 @@
           "type": "MIKROTIK_FWD"
         },
         {
-          "filepos": "[\u003ceval\u003e:6:22(14)]",
+          "filepos": "[<eval>:6:22(14)]",
           "meta": {
             "orig_custom_type": "MIKROTIK_NXDOMAIN"
           },
@@ -33,7 +33,7 @@
           "type": "MIKROTIK_NXDOMAIN"
         },
         {
-          "filepos": "[\u003ceval\u003e:7:23(18)]",
+          "filepos": "[<eval>:7:23(18)]",
           "meta": {
             "orig_custom_type": "MIKROTIK_FORWARDER"
           },

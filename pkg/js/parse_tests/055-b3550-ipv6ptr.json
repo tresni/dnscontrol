@@ -18,14 +18,14 @@
       "name": "d.c.b.a.1.1.0.2.ip6.arpa",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:5:8(23)]",
+          "filepos": "[<eval>:5:8(23)]",
           "name": "1.1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0",
           "target": "host11.example.com.",
           "ttl": 300,
           "type": "PTR"
         },
         {
-          "filepos": "[\u003ceval\u003e:6:8(29)]",
+          "filepos": "[<eval>:6:8(29)]",
           "name": "2.2.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0",
           "target": "host22.example.com.",
           "ttl": 300,
@@ -47,21 +47,21 @@
       "name": "8.b.d.0.1.0.0.2.ip6.arpa",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:10:8(43)]",
+          "filepos": "[<eval>:10:8(43)]",
           "name": "1.1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0",
           "target": "server11.example.com.",
           "ttl": 300,
           "type": "PTR"
         },
         {
-          "filepos": "[\u003ceval\u003e:11:8(49)]",
+          "filepos": "[<eval>:11:8(49)]",
           "name": "2.2.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0",
           "target": "server22.example.com.",
           "ttl": 300,
           "type": "PTR"
         },
         {
-          "filepos": "[\u003ceval\u003e:15:8(57)]",
+          "filepos": "[<eval>:15:8(57)]",
           "name": "d.c.b.a.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0",
           "subdomain": "d.c.b.a.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0",
           "target": "abcd.example.com.",

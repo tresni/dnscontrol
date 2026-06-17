@@ -11,7 +11,7 @@
       "name": "foo.com",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:2:8(11)]",
+          "filepos": "[<eval>:2:8(11)]",
           "name": "@",
           "soaexpire": 604800,
           "soambox": "admin.foo.com",

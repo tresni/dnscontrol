@@ -11,35 +11,35 @@
       "name": "foo.com",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:2:6(9)]",
+          "filepos": "[<eval>:2:6(9)]",
           "name": "@",
           "target": "1.2.3.4",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:3:6(16)]",
+          "filepos": "[<eval>:3:6(16)]",
           "name": "a",
           "target": "1.2.3.5",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:4:6(23)]",
+          "filepos": "[<eval>:4:6(23)]",
           "name": "b",
           "target": "1.2.3.6",
           "ttl": 180,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:5:6(30)]",
+          "filepos": "[<eval>:5:6(30)]",
           "name": "c",
           "target": "1.2.3.7",
           "ttl": 10800,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:6:6(37)]",
+          "filepos": "[<eval>:6:6(37)]",
           "name": "d",
           "target": "1.2.3.8",
           "ttl": 259200,

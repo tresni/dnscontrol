@@ -12,31 +12,23 @@ declare function FETCH(
             | 'DELETE'
             | 'HEAD'
             | 'OPTIONS';
-        headers?: { [key: string]: string | string[] };
-        // Ignored by the underlying code
-        // redirect: 'follow' | 'error' | 'manual';
+        headers?: { [key: string]: string };
         body?: string;
     }
 ): Promise<FetchResponse>;
 
 interface FetchResponse {
-    readonly bodyUsed: boolean;
-    readonly headers: ResponseHeaders;
     readonly ok: boolean;
     readonly status: number;
     readonly statusText: string;
-    readonly type: string;
+    readonly url: string;
+    readonly headers: ResponseHeaders;
 
     text(): Promise<string>;
     json(): Promise<any>;
 }
 
 interface ResponseHeaders {
-    get(name: string): string | undefined;
-    getAll(name: string): string[];
+    get(name: string): string;
     has(name: string): boolean;
-
-    append(name: string, value: string): void;
-    delete(name: string): void;
-    set(name: string, value: string): void;
 }

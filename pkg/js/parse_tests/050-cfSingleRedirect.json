@@ -19,7 +19,7 @@
             "sr_then": "then1",
             "sr_when": "when1"
           },
-          "filepos": "[\u003ceval\u003e:5:23(15)]",
+          "filepos": "[<eval>:5:23(15)]",
           "name": "@",
           "name_raw": "@",
           "name_unicode": "@",
@@ -37,7 +37,7 @@
             "sr_then": "then2",
             "sr_when": "when2"
           },
-          "filepos": "[\u003ceval\u003e:6:23(21)]",
+          "filepos": "[<eval>:6:23(21)]",
           "name": "@",
           "name_raw": "@",
           "name_unicode": "@",
@@ -55,7 +55,7 @@
             "sr_then": "then3",
             "sr_when": "when3"
           },
-          "filepos": "[\u003ceval\u003e:7:23(27)]",
+          "filepos": "[<eval>:7:23(27)]",
           "name": "@",
           "name_raw": "@",
           "name_unicode": "@",
@@ -73,7 +73,7 @@
             "sr_then": "thenmeta",
             "sr_when": "whenmeta"
           },
-          "filepos": "[\u003ceval\u003e:9:23(48)]",
+          "filepos": "[<eval>:9:23(48)]",
           "meta": {
             "metanum": "22",
             "metastr": "stringy"
@@ -95,7 +95,7 @@
             "sr_then": "thenttl",
             "sr_when": "whenttl"
           },
-          "filepos": "[\u003ceval\u003e:8:23(36)]",
+          "filepos": "[<eval>:8:23(36)]",
           "name": "@",
           "name_raw": "@",
           "name_unicode": "@",
@@ -105,7 +105,7 @@
           "zonfefilepartial": "name=(namettl) code=(302) when=(whenttl) then=(thenttl)"
         },
         {
-          "filepos": "[\u003ceval\u003e:2:6(9)]",
+          "filepos": "[<eval>:2:6(9)]",
           "meta": {
             "meta": "value"
           },

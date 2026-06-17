@@ -18,49 +18,49 @@
       "name": "domain.tld",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:7:6(22)]",
+          "filepos": "[<eval>:7:6(22)]",
           "name": "@",
           "target": "127.0.0.1",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:21:6(58)]",
+          "filepos": "[<eval>:21:6(58)]",
           "name": "@",
           "target": "127.0.0.3",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:8:6(26)]",
+          "filepos": "[<eval>:8:6(26)]",
           "name": "a",
           "target": "127.0.0.2",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:9:10(30)]",
+          "filepos": "[<eval>:9:10(30)]",
           "name": "b",
           "target": "c.domain.tld.",
           "ttl": 300,
           "type": "CNAME"
         },
         {
-          "filepos": "[\u003ceval\u003e:22:6(62)]",
+          "filepos": "[<eval>:22:6(62)]",
           "name": "d",
           "target": "127.0.0.4",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:23:10(66)]",
+          "filepos": "[<eval>:23:10(66)]",
           "name": "e",
           "target": "f.domain.tld.",
           "ttl": 300,
           "type": "CNAME"
         },
         {
-          "filepos": "[\u003ceval\u003e:42:6(106)]",
+          "filepos": "[<eval>:42:6(106)]",
           "name": "ssub",
           "subdomain": "ssub",
           "target": "127.0.0.7",
@@ -68,7 +68,7 @@
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:43:6(110)]",
+          "filepos": "[<eval>:43:6(110)]",
           "name": "j.ssub",
           "subdomain": "ssub",
           "target": "127.0.0.8",
@@ -76,7 +76,7 @@
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:44:10(114)]",
+          "filepos": "[<eval>:44:10(114)]",
           "name": "k.ssub",
           "subdomain": "ssub",
           "target": "l.ssub.domain.tld.",
@@ -84,7 +84,7 @@
           "type": "CNAME"
         },
         {
-          "filepos": "[\u003ceval\u003e:28:6(74)]",
+          "filepos": "[<eval>:28:6(74)]",
           "name": "ub",
           "subdomain": "ub",
           "target": "127.0.0.5",
@@ -92,7 +92,7 @@
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:29:6(78)]",
+          "filepos": "[<eval>:29:6(78)]",
           "name": "g.ub",
           "subdomain": "ub",
           "target": "127.0.0.6",
@@ -100,7 +100,7 @@
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:30:10(82)]",
+          "filepos": "[<eval>:30:10(82)]",
           "name": "h.ub",
           "subdomain": "ub",
           "target": "i.ub.domain.tld.",
@@ -123,42 +123,42 @@
       "name": "sub.domain.tld",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:13:6(42)]",
+          "filepos": "[<eval>:13:6(42)]",
           "name": "@",
           "target": "127.0.1.1",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:35:6(90)]",
+          "filepos": "[<eval>:35:6(90)]",
           "name": "@",
           "target": "127.0.1.3",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:14:6(46)]",
+          "filepos": "[<eval>:14:6(46)]",
           "name": "aa",
           "target": "127.0.1.2",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:15:10(50)]",
+          "filepos": "[<eval>:15:10(50)]",
           "name": "bb",
           "target": "cc.sub.domain.tld.",
           "ttl": 300,
           "type": "CNAME"
         },
         {
-          "filepos": "[\u003ceval\u003e:36:6(94)]",
+          "filepos": "[<eval>:36:6(94)]",
           "name": "dd",
           "target": "127.0.1.4",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:37:10(98)]",
+          "filepos": "[<eval>:37:10(98)]",
           "name": "ee",
           "target": "ff.sub.domain.tld.",
           "ttl": 300,

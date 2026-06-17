@@ -18,14 +18,14 @@
       "name": "foo.com",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:6:6(22)]",
+          "filepos": "[<eval>:6:6(22)]",
           "name": "@",
           "target": "10.1.1.1",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:7:6(26)]",
+          "filepos": "[<eval>:7:6(26)]",
           "name": "www",
           "target": "10.2.2.2",
           "ttl": 300,
@@ -47,14 +47,14 @@
       "name": "bar.foo.com",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:10:6(38)]",
+          "filepos": "[<eval>:10:6(38)]",
           "name": "@",
           "target": "10.3.3.3",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:11:6(42)]",
+          "filepos": "[<eval>:11:6(42)]",
           "name": "www",
           "target": "10.4.4.4",
           "ttl": 300,
@@ -76,28 +76,28 @@
       "name": "foo.edu",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:16:6(54)]",
+          "filepos": "[<eval>:16:6(54)]",
           "name": "@",
           "target": "10.5.5.5",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:20:6(66)]",
+          "filepos": "[<eval>:20:6(66)]",
           "name": "more1",
           "target": "10.7.7.7",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:21:6(70)]",
+          "filepos": "[<eval>:21:6(70)]",
           "name": "more2",
           "target": "10.8.8.8",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:17:6(58)]",
+          "filepos": "[<eval>:17:6(58)]",
           "name": "www",
           "target": "10.6.6.6",
           "ttl": 300,

@@ -11,7 +11,7 @@
       "name": "foo.com",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:2:10(6)]",
+          "filepos": "[<eval>:2:10(6)]",
           "name": "@",
           "target": "bar.com.",
           "ttl": 300,

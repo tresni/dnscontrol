@@ -15,7 +15,7 @@
           "dnskeyflags": 257,
           "dnskeyprotocol": 3,
           "dnskeypublickey": "AABBCCDD",
-          "filepos": "[\u003ceval\u003e:2:11(9)]",
+          "filepos": "[<eval>:2:11(9)]",
           "name": "@",
           "target": "",
           "ttl": 300,

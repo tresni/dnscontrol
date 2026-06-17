@@ -19,7 +19,7 @@
             "sr_then": "concat(\"https://goo.com\", http.request.uri.path)",
             "sr_when": "http.host eq \"test1.foo.com\" and http.request.uri.path eq \"/\""
           },
-          "filepos": "[\u003ceval\u003e:2:16(6)]",
+          "filepos": "[<eval>:2:16(6)]",
           "name": "@",
           "name_raw": "@",
           "name_unicode": "@",
@@ -37,7 +37,7 @@
             "sr_then": "concat(\"https://goo.com\", http.request.uri.path)",
             "sr_when": "http.host eq \"test2.foo.com\" and http.request.uri.path eq \"/\""
           },
-          "filepos": "[\u003ceval\u003e:3:21(10)]",
+          "filepos": "[<eval>:3:21(10)]",
           "name": "@",
           "name_raw": "@",
           "name_unicode": "@",

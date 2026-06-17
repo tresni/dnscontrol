@@ -11,35 +11,35 @@
       "name": "sortfoo.com",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:1:8(2)]",
+          "filepos": "[<eval>:1:8(2)]",
           "name": "@",
           "target": "1.2.3.4",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:1:8(2)]",
+          "filepos": "[<eval>:1:8(2)]",
           "name": "a",
           "target": "foo.com.",
           "ttl": 300,
           "type": "CNAME"
         },
         {
-          "filepos": "[\u003ceval\u003e:1:8(2)]",
+          "filepos": "[<eval>:1:8(2)]",
           "name": "b",
           "target": "foo.com.",
           "ttl": 300,
           "type": "CNAME"
         },
         {
-          "filepos": "[\u003ceval\u003e:1:8(2)]",
+          "filepos": "[<eval>:1:8(2)]",
           "name": "c",
           "target": "foo.com.",
           "ttl": 300,
           "type": "CNAME"
         },
         {
-          "filepos": "[\u003ceval\u003e:1:8(2)]",
+          "filepos": "[<eval>:1:8(2)]",
           "name": "d",
           "target": "foo.com.",
           "ttl": 300,

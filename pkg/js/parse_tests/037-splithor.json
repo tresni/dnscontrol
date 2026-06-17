@@ -26,14 +26,14 @@
       "name": "example.com",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:7:6(34)]",
+          "filepos": "[<eval>:7:6(34)]",
           "name": "main",
           "target": "3.3.3.3",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:19:6(66)]",
+          "filepos": "[<eval>:19:6(66)]",
           "name": "www",
           "target": "33.33.33.33",
           "ttl": 300,
@@ -56,14 +56,14 @@
       "name": "example.com",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:11:6(46)]",
+          "filepos": "[<eval>:11:6(46)]",
           "name": "main",
           "target": "1.1.1.1",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:23:6(74)]",
+          "filepos": "[<eval>:23:6(74)]",
           "name": "main",
           "target": "11.11.11.11",
           "ttl": 300,
@@ -87,7 +87,7 @@
       "name": "example.com",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:15:6(58)]",
+          "filepos": "[<eval>:15:6(58)]",
           "name": "main",
           "target": "8.8.8.8",
           "ttl": 300,
@@ -110,14 +110,14 @@
       "name": "example.net",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:31:6(94)]",
+          "filepos": "[<eval>:31:6(94)]",
           "name": "main",
           "target": "203.0.113.12",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:27:6(86)]",
+          "filepos": "[<eval>:27:6(86)]",
           "name": "www",
           "target": "203.0.113.1",
           "ttl": 300,
@@ -140,21 +140,21 @@
       "name": "example.net",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:36:6(109)]",
+          "filepos": "[<eval>:36:6(109)]",
           "name": "main",
           "target": "192.0.2.1",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:31:6(94)]",
+          "filepos": "[<eval>:31:6(94)]",
           "name": "main",
           "target": "203.0.113.12",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:27:6(86)]",
+          "filepos": "[<eval>:27:6(86)]",
           "name": "www",
           "target": "203.0.113.1",
           "ttl": 300,
@@ -178,21 +178,21 @@
       "name": "example.net",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:41:6(124)]",
+          "filepos": "[<eval>:41:6(124)]",
           "name": "main",
           "target": "203.0.113.1",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:31:6(94)]",
+          "filepos": "[<eval>:31:6(94)]",
           "name": "main",
           "target": "203.0.113.12",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:27:6(86)]",
+          "filepos": "[<eval>:27:6(86)]",
           "name": "www",
           "target": "203.0.113.1",
           "ttl": 300,
@@ -215,14 +215,14 @@
       "name": "empty.example.net",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:49:6(144)]",
+          "filepos": "[<eval>:49:6(144)]",
           "name": "main",
           "target": "203.0.113.22",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:45:6(136)]",
+          "filepos": "[<eval>:45:6(136)]",
           "name": "www",
           "target": "203.0.113.2",
           "ttl": 300,
@@ -244,14 +244,14 @@
       "name": "example-b.net",
       "records": [
         {
-          "filepos": "[\u003ceval\u003e:57:6(164)]",
+          "filepos": "[<eval>:57:6(164)]",
           "name": "main",
           "target": "203.0.113.12",
           "ttl": 300,
           "type": "A"
         },
         {
-          "filepos": "[\u003ceval\u003e:53:6(156)]",
+          "filepos": "[<eval>:53:6(156)]",
           "name": "www",
           "target": "203.0.113.1",
           "ttl": 300,

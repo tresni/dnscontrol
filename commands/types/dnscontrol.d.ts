@@ -40,7 +40,7 @@ type Duration =
  *
  * Compared to `fetch` from Fetch API, `FETCH` will call [PANIC](PANIC.md) to terminate the execution of the script, and therefore DNSControl, if a network error occurs.
  *
- * Otherwise the syntax of `FETCH` is the same as `fetch`.
+ * Otherwise the syntax of `FETCH` is the same as `fetch`. The response object is a subset of the standard [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response): it provides `ok`, `status`, `statusText`, `url`, `headers.get(name)`, `headers.has(name)`, `text()`, and `json()`.
  *
  * `FETCH` is not enabled by default. Please read the warnings below.
  *
@@ -80,33 +80,25 @@ declare function FETCH(
             | 'DELETE'
             | 'HEAD'
             | 'OPTIONS';
-        headers?: { [key: string]: string | string[] };
-        // Ignored by the underlying code
-        // redirect: 'follow' | 'error' | 'manual';
+        headers?: { [key: string]: string };
         body?: string;
     }
 ): Promise<FetchResponse>;
 
 interface FetchResponse {
-    readonly bodyUsed: boolean;
-    readonly headers: ResponseHeaders;
     readonly ok: boolean;
     readonly status: number;
     readonly statusText: string;
-    readonly type: string;
+    readonly url: string;
+    readonly headers: ResponseHeaders;
 
     text(): Promise<string>;
     json(): Promise<any>;
 }
 
 interface ResponseHeaders {
-    get(name: string): string | undefined;
-    getAll(name: string): string[];
+    get(name: string): string;
     has(name: string): boolean;
-
-    append(name: string, value: string): void;
-    delete(name: string): void;
-    set(name: string, value: string): void;
 }
 
 

@@ -117,7 +117,7 @@ However, we don't recommend you get too fancy.
 
 *A new JS interpreter may break your code*
 
-Some day we may change from the [Otto JS interpreter](https://github.com/robertkrimen/otto) to something else. This may break your configuration if you depend on unusual or obscure behavior of Otto.
+DNSControl uses the [Sobek JavaScript engine](https://github.com/grafana/sobek) (a maintained fork of goja), which supports modern JavaScript (ES2015+). Some day we may change to a different interpreter. This may break your configuration if you depend on unusual or obscure behavior of the interpreter.
 
 Loops and macros are fine. Just don't get too fancy.
 

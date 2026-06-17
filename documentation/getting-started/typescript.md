@@ -61,7 +61,7 @@ For the best experience, create a `tsconfig.json` file in the same directory as 
 ```json
 {
   "compilerOptions": {
-    "lib": ["es5"],
+    "lib": ["es2015"],
     "allowJs": true,
     "checkJs": true,
     "module": "None",
@@ -75,6 +75,10 @@ For the best experience, create a `tsconfig.json` file in the same directory as 
 }
 ```
 {% endcode %}
+
+{% hint style="info" %}
+**NOTE**: DNSControl's JavaScript engine supports modern JavaScript (ES2015+), so `"lib": ["es2015"]` is recommended. If you use newer standard-library APIs (e.g. `String.prototype.matchAll`), raise it accordingly (e.g. `["es2020"]`).
+{% endhint %}
 
 {% hint style="info" %}
 **NOTE**: If you split your configuration across multiple files (e.g. a `zones/` directory), add them to the `include` array:
