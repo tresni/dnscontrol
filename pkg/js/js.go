@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/DNSControl/dnscontrol/v4/models"
@@ -180,7 +179,7 @@ func requireFunc(vm *sobek.Runtime) func(sobek.FunctionCall) sobek.Value {
 		}
 
 		if err != nil {
-			throw(vm, fmt.Sprintf("File %s: %s", filepath.Base(relFile), err.Error()))
+			throw(vm, fmt.Sprintf("File %s: %s", filepath.Base(relFile), jsErrorString(err)))
 		}
 
 		// Pop back to the old directory.
@@ -302,22 +301,24 @@ func throw(vm *sobek.Runtime, str string) {
 	panic(errObj)
 }
 
-// nativeFrameRE matches the Go "(native)" stack frames that sobek appends when
-// an exception is thrown from one of our Go callbacks. They expose internal Go
-// package paths and add no value for someone debugging their dnsconfig.js.
-var nativeFrameRE = regexp.MustCompile(`\s+at \S+ \(native\)`)
+// jsErrorString returns a JavaScript error's message without the engine stack
+// trace. sobek's Exception.Error() appends a stack frame (including internal Go
+// "(native)" frames); otto did not. This keeps our output concise and matching
+// otto, e.g. "Error: File x.js: ReferenceError: foo is not defined".
+func jsErrorString(err error) string {
+	if ex, ok := err.(*sobek.Exception); ok {
+		return ex.Value().String()
+	}
+	return err.Error()
+}
 
-// cleanJSError strips internal Go "(native)" frames from a JavaScript error so
-// the message presented to the user is about their config, not our internals.
+// cleanJSError converts a thrown JavaScript exception into a concise Go error
+// without the engine stack trace, matching otto's behavior.
 func cleanJSError(err error) error {
-	if err == nil {
-		return nil
+	if ex, ok := err.(*sobek.Exception); ok {
+		return errors.New(ex.Value().String())
 	}
-	cleaned := nativeFrameRE.ReplaceAllString(err.Error(), "")
-	if cleaned == err.Error() {
-		return err
-	}
-	return errors.New(cleaned)
+	return err
 }
 
 func reverse(vm *sobek.Runtime) func(sobek.FunctionCall) sobek.Value {

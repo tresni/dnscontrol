@@ -148,6 +148,8 @@ boom();`), 0o600); err != nil {
 	testifyrequire.Contains(t, msg, "ReferenceError", "should keep the JS error type")
 	testifyrequire.NotContains(t, msg, "GoError", "should not leak the GoError prefix")
 	testifyrequire.NotContains(t, msg, "(native)", "should not leak internal Go frames")
+	// Match otto's concise style: no engine stack trace appended.
+	testifyrequire.NotContains(t, msg, "<eval>", "should not append the engine stack trace")
 }
 
 // TestRecordBuilders exercises the helper "builder" macros that are not covered
