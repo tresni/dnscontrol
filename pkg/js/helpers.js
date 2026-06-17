@@ -1894,7 +1894,7 @@ function CAA_BUILDER(value) {
     if (value.ttl) {
         CAA_TTL = TTL(value.ttl);
     }
-    r = []; // The list of records to return.
+    var r = []; // The list of records to return.
 
     if (value.iodef) {
         if (value.iodef_critical) {

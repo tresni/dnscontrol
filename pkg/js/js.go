@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/DNSControl/dnscontrol/v4/models"
@@ -93,12 +94,12 @@ func ExecuteJavascriptString(script []byte, devMode bool, variables map[string]s
 	helperJs := GetHelpers(devMode)
 	// run helper script to prime vm and initialize variables
 	if _, err := vm.RunString(helperJs); err != nil {
-		return nil, err
+		return nil, cleanJSError(err)
 	}
 
 	// run user script
 	if _, err := vm.RunString(string(script)); err != nil {
-		return nil, err
+		return nil, cleanJSError(err)
 	}
 
 	// export conf as string and unmarshal
@@ -288,8 +289,35 @@ func jsPanic(vm *sobek.Runtime) func(sobek.FunctionCall) sobek.Value {
 	}
 }
 
+// throw raises a JavaScript Error with the given message. We construct a real
+// JS Error (rather than vm.NewGoError) so the surfaced message reads
+// "Error: ..." instead of the confusing "GoError: ..." prefix, which made
+// config bugs look like internal dnscontrol failures.
 func throw(vm *sobek.Runtime, str string) {
-	panic(vm.NewGoError(errors.New(str)))
+	errObj, err := vm.New(vm.Get("Error"), vm.ToValue(str))
+	if err != nil {
+		// Fall back to a Go error if the Error constructor is somehow unavailable.
+		panic(vm.NewGoError(errors.New(str)))
+	}
+	panic(errObj)
+}
+
+// nativeFrameRE matches the Go "(native)" stack frames that sobek appends when
+// an exception is thrown from one of our Go callbacks. They expose internal Go
+// package paths and add no value for someone debugging their dnsconfig.js.
+var nativeFrameRE = regexp.MustCompile(`\s+at \S+ \(native\)`)
+
+// cleanJSError strips internal Go "(native)" frames from a JavaScript error so
+// the message presented to the user is about their config, not our internals.
+func cleanJSError(err error) error {
+	if err == nil {
+		return nil
+	}
+	cleaned := nativeFrameRE.ReplaceAllString(err.Error(), "")
+	if cleaned == err.Error() {
+		return err
+	}
+	return errors.New(cleaned)
 }
 
 func reverse(vm *sobek.Runtime) func(sobek.FunctionCall) sobek.Value {
