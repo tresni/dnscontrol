@@ -62,8 +62,11 @@ func ExecuteJavaScript(file string, devMode bool, variables map[string]string) (
 	return ExecuteJavascriptString(script, devMode, variables)
 }
 
-// ExecuteJavascriptString accepts a string containing javascript and runs it, returning the resulting dnsConfig.
-func ExecuteJavascriptString(script []byte, devMode bool, variables map[string]string) (*models.DNSConfig, error) {
+// newConfiguredVM creates a sobek runtime set up the way dnsconfig.js scripts
+// run: underscore loaded, the native functions and CLI variables registered,
+// and helpers.js evaluated. It does not run a user script, so it can also be
+// used to evaluate expressions in the same environment as the DSL.
+func newConfiguredVM(devMode bool, variables map[string]string) (*sobek.Runtime, error) {
 	vm := sobek.New()
 
 	// load underscore.js (sobek, unlike otto, does not bundle it).
@@ -112,6 +115,16 @@ func ExecuteJavascriptString(script []byte, devMode bool, variables map[string]s
 	}
 	if _, err := vm.RunProgram(helpersProg); err != nil {
 		return nil, cleanJSError(err)
+	}
+
+	return vm, nil
+}
+
+// ExecuteJavascriptString accepts a string containing javascript and runs it, returning the resulting dnsConfig.
+func ExecuteJavascriptString(script []byte, devMode bool, variables map[string]string) (*models.DNSConfig, error) {
+	vm, err := newConfiguredVM(devMode, variables)
+	if err != nil {
+		return nil, err
 	}
 
 	// run user script
