@@ -28,6 +28,16 @@ var helpersJsFileName = "pkg/js/helpers.js"
 //go:embed underscore.js
 var underscoreJs string
 
+// underscoreProgram and helpersProgram are the underscore.js and embedded
+// helpers.js sources compiled once and reused across VMs (sobek Programs are
+// runtime-independent), avoiding a re-parse on every ExecuteJavascriptString
+// call. They are compiled with the same empty name and non-strict flag that
+// RunString uses, so stack positions (filepos) are unchanged.
+var (
+	underscoreProgram = sobek.MustCompile("", underscoreJs, false)
+	helpersProgram    = sobek.MustCompile("", helpersJsStatic, false)
+)
+
 // currentDirectory is the current directory as used by require().
 // This is used to emulate nodejs-style require() directory handling.
 // If require("a/b/c.js") is called, any require() statement in c.js
@@ -57,8 +67,8 @@ func ExecuteJavascriptString(script []byte, devMode bool, variables map[string]s
 	vm := sobek.New()
 
 	// load underscore.js (sobek, unlike otto, does not bundle it).
-	if _, err := vm.RunString(underscoreJs); err != nil {
-		return nil, err
+	if _, err := vm.RunProgram(underscoreProgram); err != nil {
+		return nil, cleanJSError(err)
 	}
 
 	// only define fetch() when explicitly enabled
@@ -90,9 +100,17 @@ func ExecuteJavascriptString(script []byte, devMode bool, variables map[string]s
 		}
 	}
 
-	helperJs := GetHelpers(devMode)
-	// run helper script to prime vm and initialize variables
-	if _, err := vm.RunString(helperJs); err != nil {
+	// run helper script to prime vm and initialize variables. The embedded
+	// helpers are precompiled; in devMode they are recompiled from disk so
+	// edits are picked up without rebuilding.
+	helpersProg := helpersProgram
+	if devMode {
+		var err error
+		if helpersProg, err = sobek.Compile("", GetHelpers(true), false); err != nil {
+			return nil, cleanJSError(err)
+		}
+	}
+	if _, err := vm.RunProgram(helpersProg); err != nil {
 		return nil, cleanJSError(err)
 	}
 
@@ -104,7 +122,7 @@ func ExecuteJavascriptString(script []byte, devMode bool, variables map[string]s
 	// export conf as string and unmarshal
 	value, err := vm.RunString(`JSON.stringify(conf)`)
 	if err != nil {
-		return nil, err
+		return nil, cleanJSError(err)
 	}
 	str := value.String()
 	conf := &models.DNSConfig{}
@@ -198,11 +216,11 @@ func listFiles(vm *sobek.Runtime) func(sobek.FunctionCall) sobek.Value {
 		}
 
 		// Check if provided parameters are valid
-		// First: Let's check dir.
-		if dir, ok := call.Argument(0).Export().(string); !ok || len(dir) == 0 {
+		// First: Let's check dir. (Path where to start listing.)
+		dir, ok := call.Argument(0).Export().(string)
+		if !ok || len(dir) == 0 {
 			throw(vm, "glob: first argument needs to be a path, provided as string.")
 		}
-		dir := call.Argument(0).String() // Path where to start listing
 		printer.Debugf("listFiles: cd: %s, user: %s \n", currentDirectory, dir)
 		// now we always prepend the current directory we're working in, which is being set within
 		// the func ExecuteJavascript() above. So when require("domains/load_all.js") is being used,
@@ -288,17 +306,21 @@ func jsPanic(vm *sobek.Runtime) func(sobek.FunctionCall) sobek.Value {
 	}
 }
 
-// throw raises a JavaScript Error with the given message. We construct a real
-// JS Error (rather than vm.NewGoError) so the surfaced message reads
+// newJSError builds a JavaScript Error value with the given message. We use a
+// real JS Error (rather than vm.NewGoError) so the surfaced message reads
 // "Error: ..." instead of the confusing "GoError: ..." prefix, which made
 // config bugs look like internal dnscontrol failures.
-func throw(vm *sobek.Runtime, str string) {
-	errObj, err := vm.New(vm.Get("Error"), vm.ToValue(str))
-	if err != nil {
-		// Fall back to a Go error if the Error constructor is somehow unavailable.
-		panic(vm.NewGoError(errors.New(str)))
+func newJSError(vm *sobek.Runtime, msg string) sobek.Value {
+	if errObj, err := vm.New(vm.Get("Error"), vm.ToValue(msg)); err == nil {
+		return errObj
 	}
-	panic(errObj)
+	// Fall back to a Go error if the Error constructor is somehow unavailable.
+	return vm.NewGoError(errors.New(msg))
+}
+
+// throw raises a JavaScript Error with the given message.
+func throw(vm *sobek.Runtime, str string) {
+	panic(newJSError(vm, str))
 }
 
 // jsErrorString returns a JavaScript error's message without the engine stack
@@ -315,8 +337,8 @@ func jsErrorString(err error) string {
 // cleanJSError converts a thrown JavaScript exception into a concise Go error
 // without the engine stack trace, matching otto's behavior.
 func cleanJSError(err error) error {
-	if ex, ok := err.(*sobek.Exception); ok {
-		return errors.New(ex.Value().String())
+	if _, ok := err.(*sobek.Exception); ok {
+		return errors.New(jsErrorString(err))
 	}
 	return err
 }

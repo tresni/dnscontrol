@@ -50,7 +50,7 @@ func defineFetch(vm *sobek.Runtime) error {
 
 		req, err := http.NewRequest(method, url, body)
 		if err != nil {
-			_ = reject(vm.NewGoError(err))
+			_ = reject(newJSError(vm, err.Error()))
 			return vm.ToValue(promise)
 		}
 		for k, v := range reqHeaders {
@@ -59,14 +59,14 @@ func defineFetch(vm *sobek.Runtime) error {
 
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
-			_ = reject(vm.NewGoError(err))
+			_ = reject(newJSError(vm, err.Error()))
 			return vm.ToValue(promise)
 		}
 		defer res.Body.Close()
 
 		data, err := io.ReadAll(res.Body)
 		if err != nil {
-			_ = reject(vm.NewGoError(err))
+			_ = reject(newJSError(vm, err.Error()))
 			return vm.ToValue(promise)
 		}
 
@@ -95,23 +95,27 @@ func newResponse(vm *sobek.Runtime, res *http.Response, data []byte) *sobek.Obje
 	})
 	_ = obj.Set("headers", headers)
 
+	// resolvedPromise returns an already-resolved promise wrapping val.
+	resolvedPromise := func(val sobek.Value) sobek.Value {
+		p, resolve, _ := vm.NewPromise()
+		_ = resolve(val)
+		return vm.ToValue(p)
+	}
+
 	// text() resolves to the body as a string.
 	_ = obj.Set("text", func(sobek.FunctionCall) sobek.Value {
-		p, resolve, _ := vm.NewPromise()
-		_ = resolve(vm.ToValue(string(data)))
-		return vm.ToValue(p)
+		return resolvedPromise(vm.ToValue(string(data)))
 	})
 
 	// json() resolves to the parsed body, or rejects on invalid JSON.
 	_ = obj.Set("json", func(sobek.FunctionCall) sobek.Value {
-		p, resolve, reject := vm.NewPromise()
 		var parsed interface{}
 		if err := json.Unmarshal(data, &parsed); err != nil {
-			_ = reject(vm.NewGoError(err))
-		} else {
-			_ = resolve(vm.ToValue(parsed))
+			p, _, reject := vm.NewPromise()
+			_ = reject(newJSError(vm, err.Error()))
+			return vm.ToValue(p)
 		}
-		return vm.ToValue(p)
+		return resolvedPromise(vm.ToValue(parsed))
 	})
 
 	return obj

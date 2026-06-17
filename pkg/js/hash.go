@@ -6,9 +6,18 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
+	"hash"
 
 	"github.com/grafana/sobek"
 )
+
+// hashConstructors maps the algorithm names accepted by HASH() to the
+// constructor for that hash.
+var hashConstructors = map[string]func() hash.Hash{
+	"SHA1": sha1.New, "sha1": sha1.New,
+	"SHA256": sha256.New, "sha256": sha256.New,
+	"SHA512": sha512.New, "sha512": sha512.New,
+}
 
 // Exposes sha1, sha256, and sha512 hashing functions to Javascript.
 func hashFunc(vm *sobek.Runtime) func(sobek.FunctionCall) sobek.Value {
@@ -18,24 +27,13 @@ func hashFunc(vm *sobek.Runtime) func(sobek.FunctionCall) sobek.Value {
 		}
 		algorithm := call.Argument(0).String() // The algorithm to use for hashing
 		value := call.Argument(1).String()     // The value to hash
-		var result sobek.Value
 
-		switch algorithm {
-		case "SHA1", "sha1":
-			tmp := sha1.New()
-			tmp.Write([]byte(value))
-			result = vm.ToValue(hex.EncodeToString(tmp.Sum(nil)))
-		case "SHA256", "sha256":
-			tmp := sha256.New()
-			tmp.Write([]byte(value))
-			result = vm.ToValue(hex.EncodeToString(tmp.Sum(nil)))
-		case "SHA512", "sha512":
-			tmp := sha512.New()
-			tmp.Write([]byte(value))
-			result = vm.ToValue(hex.EncodeToString(tmp.Sum(nil)))
-		default:
+		newHash, ok := hashConstructors[algorithm]
+		if !ok {
 			throw(vm, fmt.Sprintf("invalid algorithm %s given", algorithm))
 		}
-		return result
+		h := newHash()
+		h.Write([]byte(value))
+		return vm.ToValue(hex.EncodeToString(h.Sum(nil)))
 	}
 }
